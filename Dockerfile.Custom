@@ -1,0 +1,7 @@
+FROM golang:1.10 as build_image
+WORKDIR /app
+ADD . /app
+RUN apt update && apt install netcat -y
+RUN ./build.sh
+RUN chmod +x ./start.sh
+CMD ["/app/tile38-server"]
