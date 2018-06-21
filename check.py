@@ -29,8 +29,8 @@ while master_not_ready:
         obj = make_request(url1)
         if obj['stats']['num_objects'] > 10:
             master_not_ready = False
-            subprocess.call("./tile38-cli FOLLOW tile38-write 9851")
-            subprocess.call("./tile38-cli READONLY yes")
+            subprocess.call(["./tile38-cli", "FOLLOW", "tile38-write", "9851"])
+            subprocess.call(["./tile38-cli", "READONLY", "yes"])
             break
     except Exception as err:
         print(err)
