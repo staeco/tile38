@@ -43,5 +43,5 @@ while self_not_ready:
             self_not_ready = False
             break
     except Exception as err:
-        # print(err)
+        print(err)
         wait()
