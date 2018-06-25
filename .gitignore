@@ -8,3 +8,4 @@ packages/
 # Ignore IDE folders
 .idea/
 .vscode/
+nohup.out
