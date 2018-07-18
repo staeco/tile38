@@ -1,5 +1,7 @@
 #!/bin/bash
 
-nohup ./aof.sh &
+python_server() {
+  python -m SimpleHTTPServer 8081
+}
 
-./tile38-server
+python_server & ./tile38-server

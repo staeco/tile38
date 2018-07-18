@@ -1,7 +1,11 @@
 FROM golang:1.10 as build_image
+RUN apt install python
 RUN mkdir -p /app/data
+
 WORKDIR /app
 ADD . /app
 RUN ./build.sh
 RUN chmod +x ./start.sh
+
+EXPOSE 8081
 CMD ["/app/start.sh"]

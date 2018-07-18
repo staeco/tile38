@@ -10,4 +10,5 @@ RUN addgroup -S tile38 && \
 VOLUME /data
 
 EXPOSE 9851
+EXPOSE 8081
 CMD ["tile38-server", "-d", "/data"]
