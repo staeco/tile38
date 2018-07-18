@@ -25,13 +25,13 @@ fi
 
 if [ "$1" == "travis-docker-push" ]; then
     # GIT_VERSION - always the last verison number, like 1.12.1.
-    export GIT_VERSION=$(git describe --tags --abbrev=0)  
+    export GIT_VERSION=$(git describe --tags --abbrev=0)
     # GIT_COMMIT_SHORT - the short git commit number, like a718ef0.
     export GIT_COMMIT_SHORT=$(git rev-parse --short HEAD)
     # DOCKER_REPO - the base repository name to push the docker build to.
     export DOCKER_REPO=$DOCKER_USER/tile38
 
-    if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then 
+    if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
         # never push from a pull request
         echo "Not pushing, on a PR or not running in Travis CI"
     elif [ "$TRAVIS_BRANCH" != "master" ]; then
@@ -102,9 +102,9 @@ if [ "$GOVERS" != "devel" ]; then
 		return
 	}
 	GOVERS="${GOVERS:2}"
-	EQRES=$(vercomp "$GOVERS" "1.7")  
+	EQRES=$(vercomp "$GOVERS" "1.7")
 	if [ "$EQRES" == "-1" ]; then
-		  echo "error: Go '1.7' or greater is required and '$GOVERS' is currently installed. Please upgrade Go at https://golang.org/dl to continue."	
+		  echo "error: Go '1.7' or greater is required and '$GOVERS' is currently installed. Please upgrade Go at https://golang.org/dl to continue."
 		  exit 1
 	fi
 fi
@@ -191,5 +191,3 @@ if [ "$1" == "cover" ]; then
 	trap testend EXIT
 	go test -cover $(go list ./... | grep -v /vendor/)
 fi
-
-
