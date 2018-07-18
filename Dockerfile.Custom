@@ -8,4 +8,5 @@ RUN ./build.sh
 RUN chmod +x ./start.sh
 
 EXPOSE 8081
+EXPOSE 9851
 CMD ["/app/start.sh"]
