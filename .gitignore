@@ -4,7 +4,6 @@ tile38-*
 coverage.out
 packages/
 
-data/*
 data/queue.db
 
 # Ignore IDE folders
