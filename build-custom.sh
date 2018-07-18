@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
-docker build -f Dockerfile.Custom -t gcr.io/stae-product/tile38:aof-2 .
+export BUILD_REV=$(git rev-parse HEAD)
 
-docker push gcr.io/stae-product/tile38:aof-2
+docker build -f Dockerfile.Custom -t gcr.io/stae-product/tile38:aof-${BUILD_REV} .
+
+docker push gcr.io/stae-product/tile38:aof-${BUILD_REV}
