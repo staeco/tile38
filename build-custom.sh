@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
-docker build -f Dockerfile.Custom -t staeco/tile38:circleci .
+export TAG=circleci1
 
-docker push staeco/tile38:circleci
+docker build -f Dockerfile.Custom -t staeco/tile38:${TAG} .
+
+docker push staeco/tile38:${TAG}
