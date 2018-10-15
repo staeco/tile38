@@ -355,7 +355,6 @@ func keys_WHEREIN_test(mc *mockServer) error {
 	})
 }
 
-
 func keys_WHEREEVAL_test(mc *mockServer) error {
 	return mc.DoBatch([][]interface{}{
 		{"SET", "mykey", "myid_a1", "FIELD", "a", 1, "POINT", 33, -115}, {"OK"},

@@ -2,6 +2,19 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+
+## [1.13.0] - 2018-08-29
+### Added
+- eef5f3c: Add geofence notifications over pub/sub channels
+- 3a6f366: Add NODWELL keyword to roaming geofences
+- #343: Add Nats endpoints (@lennycampino)
+- #340: Add MQTT tls/cert options (@tobilg)
+- #314: Add CLIP subcommand to INTERSECTS (@rshura)
+
+### Changes
+- 3ae26e3: Updated B-tree implementation
+- 1d78a41: Updated R-tree implementation
+
 ## [1.12.3] - 2018-06-16
 ### Fixed
 - #316: Fix AMQP and AMQPS webhook endpoints to support namespaces (@DeadWisdom)

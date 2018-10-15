@@ -20,8 +20,15 @@
 #  name = "github.com/x/y"
 #  version = "2.4.0"
 
+required = [
+  "github.com/tidwall/lotsa", 
+  "github.com/mmcloughlin/geohash", 
+  "github.com/tidwall/geojson"
+]
 
-required = ["github.com/tidwall/lotsa"]
+[[constraint]]
+  branch = "master"
+  name = "github.com/tidwall/boxtree"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
@@ -46,10 +53,6 @@ required = ["github.com/tidwall/lotsa"]
 [[constraint]]
   branch = "master"
   name = "github.com/streadway/amqp"
-
-[[constraint]]
-  name = "github.com/stretchr/testify"
-  version = "1.1.4"
 
 [[constraint]]
   branch = "master"
@@ -78,10 +81,6 @@ required = ["github.com/tidwall/lotsa"]
 [[constraint]]
   name = "github.com/tidwall/sjson"
   version = "1.0.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/tidwall/tinyqueue"
 
 [[constraint]]
   branch = "master"
