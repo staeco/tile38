@@ -4,7 +4,7 @@ tile38-*
 coverage.out
 packages/
 
-data/*
+data/appendonly.aof
 data/queue.db
 
 # Ignore IDE folders
