@@ -4,7 +4,7 @@ set -e
 cd $(dirname "${BASH_SOURCE[0]}")
 OD="$(pwd)"
 
-VERSION=1.12.3
+VERSION=1.13.0
 PROTECTED_MODE="no"
 
 # Hardcode some values to the core package
@@ -161,7 +161,7 @@ if [ "$NOLINK" != "1" ]; then
 fi
 
 # generate the core package
-pkg/core/gen.sh
+core/gen.sh
 
 # build and store objects into original directory.
 CGO_ENABLED=0 go build -ldflags "$LDFLAGS -extldflags '-static'" -o "$OD/tile38-server" cmd/tile38-server/*.go
@@ -178,7 +178,7 @@ if [ "$1" == "test" ]; then
 	}
 	trap testend EXIT
 	cd tests && go test && cd ..
-	go test $(go list ./... | grep -v /vendor/ | grep -v /tests)
+	go test $(go list ./... | grep -v /vendor/ | grep -v /tests | grep -v /pkg/geojson_bak)
 fi
 
 # cover if requested

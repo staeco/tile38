@@ -1,11 +1,11 @@
 <p align="center">
   <a href="http://tile38.com"><img 
-    src="/pkg/assets/logo1500.png" 
+    src="/internal/assets/logo1500.png" 
     width="200" height="200" border="0" alt="Tile38"></a>
 </p>
 <p align="center">
 <a href="https://join.slack.com/t/tile38/shared_invite/enQtMzQ0OTEwMDUxMzc5LTc0NTJjZmM3YjFhOGZiZGU2NDNjOWEwM2Q5ZWE3MzFiYWZkZDIyN2U2ZmUzZDBmODU0MjI1ZjQ0N2Y1M2I1NTg"><img src="https://img.shields.io/badge/slack-channel-orange.svg" alt="Slack Channel"></a>
-<a href="https://github.com/tidwall/tile38/releases"><img src="https://img.shields.io/badge/version-1.12.3-green.svg?" alt="Version"></a>
+<a href="https://github.com/tidwall/tile38/releases"><img src="https://img.shields.io/badge/version-1.13.0-green.svg?" alt="Version"></a>
 <a href="https://travis-ci.org/tidwall/tile38"><img src="https://travis-ci.org/tidwall/tile38.svg?branch=master" alt="Build Status"></a>
 <a href="https://hub.docker.com/r/tile38/tile38"><img src="https://img.shields.io/badge/docker-ready-blue.svg" alt="Docker Ready"></a>
 </p>
@@ -14,17 +14,17 @@ Tile38 is an open source (MIT licensed), in-memory geolocation data store, spati
 
 <p align="center">
 <i>This README is quick start document. You can find detailed documentation at <a href="http://tile38.com">http://tile38.com</a>.</i><br><br>
-<a href="#searching"><img src="/pkg/assets/search-nearby.png" alt="Nearby" border="0" width="120" height="120"></a>
-<a href="#searching"><img src="/pkg/assets/search-within.png" alt="Within" border="0" width="120" height="120"></a>
-<a href="#searching"><img src="/pkg/assets/search-intersects.png" alt="Intersects" border="0" width="120" height="120"></a>
-<a href="http://tile38.com/topics/geofencing"><img src="/pkg/assets/geofence.gif" alt="Geofencing" border="0" width="120" height="120"></a>
-<a href="http://tile38.com/topics/roaming-geofences"><img src="/pkg/assets/roaming.gif" alt="Roaming Geofences" border="0" width="120" height="120"></a>
+<a href="#searching"><img src="/internal/assets/search-nearby.png" alt="Nearby" border="0" width="120" height="120"></a>
+<a href="#searching"><img src="/internal/assets/search-within.png" alt="Within" border="0" width="120" height="120"></a>
+<a href="#searching"><img src="/internal/assets/search-intersects.png" alt="Intersects" border="0" width="120" height="120"></a>
+<a href="http://tile38.com/topics/geofencing"><img src="/internal/assets/geofence.gif" alt="Geofencing" border="0" width="120" height="120"></a>
+<a href="http://tile38.com/topics/roaming-geofences"><img src="/internal/assets/roaming.gif" alt="Roaming Geofences" border="0" width="120" height="120"></a>
 </p>
 
 ## Features
 
 - Spatial index with [search](#searching) methods such as Nearby, Within, and Intersects.
-- Realtime [geofencing](#geofencing) through persistent sockets or [webhooks](http://tile38.com/commands/sethook).
+- Realtime [geofencing](#geofencing) through [webhooks](http://tile38.com/commands/sethook) or [pub/sub channels](#pubsub-channels).
 - Object types of [lat/lon](#latlon-point), [bbox](#bounding-box), [Geohash](#geohash), [GeoJSON](#geojson), [QuadKey](#quadkey), and [XYZ tile](#xyz-tile).
 - Support for lots of [Clients Libraries](#client-libraries) written in many different languages.
 - Variety of protocols, including [http](#http) (curl), [websockets](#websockets), [telnet](#telnet), and the [Redis RESP](http://redis.io/topics/protocol).
@@ -32,8 +32,6 @@ Tile38 is an open source (MIT licensed), in-memory geolocation data store, spati
 - Full [command line interface](#cli).
 - Leader / follower [replication](#replication).
 - In-memory database that persists on disk.
-- All coordinates are in [WGS 84 Web Mercator / EPSG:3857](#coordinate-system)
-- Fast R-Tree indexes based on the [RBush](https://github.com/mourner/rbush) library by [Vladimir Agafonkin](https://github.com/mourner)
 
 ## Components
 - `tile38-server    ` - The server
@@ -96,12 +94,6 @@ $ ./tile38-cli
 > help
 ```
 
-## Coordinate System
-It's important to note that the coordinate system Tile38 uses is 
-[WGS 84 Web Mercator](https://en.wikipedia.org/wiki/Web_Mercator), also known 
-as EPSG:3857. All distance are in meters and all calculations are done on a spherical surface, 
-not a plane.
-
 ## <a name="cli"></a>Playing with Tile38
 
 Basic operations:
@@ -142,41 +134,25 @@ To set a field when an object already exists:
 
 Tile38 has support to search for objects and points that are within or intersects other objects. All object types can be searched including Polygons, MultiPolygons, GeometryCollections, etc.
 
-<img src="/pkg/assets/search-within.png" width="200" height="200" border="0" alt="Search Within" align="left">
+<img src="/internal/assets/search-within.png" width="200" height="200" border="0" alt="Search Within" align="left">
 
 #### Within 
 WITHIN searches a collection for objects that are fully contained inside a specified bounding area.
 <BR CLEAR="ALL">
 
-<img src="/pkg/assets/search-intersects.png" width="200" height="200" border="0" alt="Search Intersects" align="left">
+<img src="/internal/assets/search-intersects.png" width="200" height="200" border="0" alt="Search Intersects" align="left">
 
 #### Intersects
 INTERSECTS searches a collection for objects that intersect a specified bounding area.
 <BR CLEAR="ALL">
 
-<img src="/pkg/assets/search-nearby.png" width="200" height="200" border="0" alt="Search Nearby" align="left">
+<img src="/internal/assets/search-nearby.png" width="200" height="200" border="0" alt="Search Nearby" align="left">
 
 #### Nearby
 NEARBY searches a collection for objects that intersect a specified radius.
 <BR CLEAR="ALL">
 
-
-
-
-
 ### Search options
-**SPARSE** - This option will distribute the results of a search evenly across the requested area.  
-This is very helpful for example; when you have many (perhaps millions) of objects and do not want them all clustered together on a map. Sparse will limit the number of objects returned and provide them evenly distributed so that your map looks clean.<br><br>
-You can choose a value between 1 and 8. The value 1 will result in no more than 4 items. The value 8 will result in no more than 65536. *1=4, 2=16, 3=64, 4=256, 5=1024, 6=4098, 7=16384, 8=65536.*<br><br>
-<table>
-<td>No Sparsing<img src="/pkg/assets/sparse-none.png" width="100" height="100" border="0" alt="Search Within"></td>
-<td>Sparse 1<img src="/pkg/assets/sparse-1.png" width="100" height="100" border="0" alt="Search Within"></td>
-<td>Sparse 2<img src="/pkg/assets/sparse-2.png" width="100" height="100" border="0" alt="Search Within"></td>
-<td>Sparse 3<img src="/pkg/assets/sparse-3.png" width="100" height="100" border="0" alt="Search Within"></td>
-<td>Sparse 4<img src="/pkg/assets/sparse-4.png" width="100" height="100" border="0" alt="Search Within"></td>
-<td>Sparse 5<img src="/pkg/assets/sparse-5.png" width="100" height="100" border="0" alt="Search Within"></td>
-</table>
-*Please note that the higher the sparse value, the slower the performance. Also, LIMIT and CURSOR are not available when using SPARSE.* 
 
 **WHERE** - This option allows for filtering out results based on [field](#fields) values. For example<br>```nearby fleet where speed 70 +inf point 33.462 -112.268 6000``` will return only the objects in the 'fleet' collection that are within the 6 km radius **and** have a field named `speed` that is greater than `70`. <br><br>Multiple WHEREs are concatenated as **and** clauses. ```WHERE speed 70 +inf WHERE age -inf 24``` would be interpreted as *speed is over 70 <b>and</b> age is less than 24.*<br><br>The default value for a field is always `0`. Thus if you do a WHERE on the field `speed` and an object does not have that field set, the server will pretend that the object does and that the value is Zero.
 
@@ -191,7 +167,7 @@ You can choose a value between 1 and 8. The value 1 will result in no more than 
 
 ## Geofencing
 
-<img src="/pkg/assets/geofence.gif" width="200" height="200" border="0" alt="Geofence animation" align="left">
+<img src="/internal/assets/geofence.gif" width="200" height="200" border="0" alt="Geofence animation" align="left">
 A <a href="https://en.wikipedia.org/wiki/Geo-fence">geofence</a> is a virtual boundary that can detect when an object enters or exits the area. This boundary can be a radius, bounding box, or a polygon. Tile38 can turn any standard search into a geofence monitor by adding the FENCE keyword to the search. 
 
 *Tile38 also allows for [Webhooks](http://tile38.com/commands/sethook) to be assigned to Geofences.*
@@ -232,6 +208,22 @@ These can be used when establishing a geofence, to pre-filter responses. For ins
 > nearby fleet fence detect enter,exit point 33.462 -112.268 6000
 ```
 
+### Pub/sub channels
+
+Tile38 supports delivering geofence notications over pub/sub channels. 
+
+To create a static geofence that sends notifications when a bus is within 200 meters of a point and sends to the `busstop` channel:
+
+```
+> setchan busstop nearby buses fence point 33.5123 -112.2693 200
+```
+
+Subscribe on the `busstop` channel:
+
+```
+> subscribe busstop
+```
+
 ## Object types
 
 All object types except for XYZ Tiles and QuadKeys can be stored in a collection. XYZ Tiles and QuadKeys are reserved for the SEARCH keyword only.
@@ -255,11 +247,7 @@ set fleet truck1 hash 9tbnthxzr # this would be equivlent to 'point 33.5123 -112
 ```
 
 #### GeoJSON
-[GeoJSON](http://geojson.org/) is an industry standard format for representing a variety of object types including a point, multipoint, linestring, multilinestring, polygon, multipolygon, geometrycollection, feature, and featurecollection. Tile38 supports all of the standards with these exceptions.
-
-1. The `crs` member is not supported and will be ignored. The CRS84/WGS84 projection is assumed.
-2. Any member that is not recognized (including `crs`) will be ignored.
-3. All coordinates can be 2 or 3 axes. Less than 2 axes or more than 3 will result in a parsing error.
+[GeoJSON](http://geojson.org/) is an industry standard format for representing a variety of object types including a point, multipoint, linestring, multilinestring, polygon, multipolygon, geometrycollection, feature, and featurecollection.
 
 <i>* All ignored members will not persist.</i>
 
