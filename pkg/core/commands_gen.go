@@ -1391,6 +1391,10 @@ var commandsJSON = `{
     "summary": "Shrinks the aof in the background",
     "group": "replication"
   },
+  "AUTOAOFSHRINK": {
+    "summary": "Automatically shrinks the aof based on the AOFLIMIT",
+    "group": "replication"
+  },
   "PING": {
     "summary": "Ping the server",
     "group": "connection"

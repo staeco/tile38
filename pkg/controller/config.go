@@ -33,10 +33,11 @@ const (
 	ProtectedMode = "protected-mode"
 	MaxMemory     = "maxmemory"
 	AutoGC        = "autogc"
+	AutoAOFShrink = "autoaofshrink"
 	KeepAlive     = "keepalive"
 )
 
-var validProperties = []string{RequirePass, LeaderAuth, ProtectedMode, MaxMemory, AutoGC, KeepAlive}
+var validProperties = []string{RequirePass, LeaderAuth, ProtectedMode, MaxMemory, AutoGC, AutoAOFShrink, KeepAlive}
 
 // Config is a tile38 config
 type Config struct {
@@ -61,6 +62,7 @@ type Config struct {
 	_maxMemory      int64
 	_autoGCP        string
 	_autoGC         uint64
+	_autoAOFShrink  bool
 	_keepAliveP     string
 	_keepAlive      int64
 }
@@ -90,6 +92,7 @@ func loadConfig(path string) (*Config, error) {
 		_protectedModeP: gjson.Get(json, ProtectedMode).String(),
 		_maxMemoryP:     gjson.Get(json, MaxMemory).String(),
 		_autoGCP:        gjson.Get(json, AutoGC).String(),
+		_autoAOFShrink:  gjson.Get(json, AutoAOFShrink).Bool(),
 		_keepAliveP:     gjson.Get(json, KeepAlive).String(),
 	}
 	// load properties
@@ -256,6 +259,12 @@ func (config *Config) setProperty(name, value string, fromLoad bool) error {
 			}
 			config._autoGC = gc
 		}
+	case AutoAOFShrink:
+		shrink, err := strconv.ParseBool(value)
+		if err != nil {
+			return err
+		}
+		config._autoAOFShrink = shrink
 	case MaxMemory:
 		sz, ok := parseMemSize(value)
 		if !ok {
@@ -313,6 +322,8 @@ func (config *Config) getProperty(name string) string {
 		return ""
 	case AutoGC:
 		return strconv.FormatUint(config._autoGC, 10)
+	case AutoAOFShrink:
+		return strconv.FormatBool(config._autoAOFShrink)
 	case RequirePass:
 		return config._requirePass
 	case LeaderAuth:
@@ -452,6 +463,12 @@ func (config *Config) autoGC() uint64 {
 	config.mu.RUnlock()
 	return v
 }
+func (config *Config) autoAOFShrink() bool {
+	config.mu.RLock()
+	v := config._autoAOFShrink
+	config.mu.RUnlock()
+	return v
+}
 func (config *Config) keepAlive() int64 {
 	config.mu.RLock()
 	v := config._keepAlive
@@ -511,6 +528,11 @@ func (config *Config) setMaxMemory(v int) {
 func (config *Config) setAutoGC(v uint64) {
 	config.mu.Lock()
 	config._autoGC = v
+	config.mu.Unlock()
+}
+func (config *Config) setAutoAOFShrink(v bool) {
+	config.mu.Lock()
+	config._autoAOFShrink = v
 	config.mu.Unlock()
 }
 func (config *Config) setKeepAlive(v int64) {

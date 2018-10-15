@@ -70,16 +70,17 @@ type Controller struct {
 	epc     *endpoint.Manager
 
 	// atomics
-	followc                aint // counter increases when follow property changes
-	statsTotalConns        aint // counter for total connections
-	statsTotalCommands     aint // counter for total commands
-	statsExpired           aint // item expiration counter
-	lastShrinkDuration     aint
-	currentShrinkStart     atime
-	stopBackgroundExpiring abool
-	stopWatchingMemory     abool
-	stopWatchingAutoGC     abool
-	outOfMemory            abool
+	followc                   aint // counter increases when follow property changes
+	statsTotalConns           aint // counter for total connections
+	statsTotalCommands        aint // counter for total commands
+	statsExpired              aint // item expiration counter
+	lastShrinkDuration        aint
+	currentShrinkStart        atime
+	stopBackgroundExpiring    abool
+	stopWatchingMemory        abool
+	stopWatchingAutoGC        abool
+	stopWatchingAutoAOFShrink abool
+	outOfMemory               abool
 
 	connsmu sync.RWMutex
 	conns   map[*server.Conn]*clientConn
@@ -202,11 +203,13 @@ func ListenAndServeEx(host string, port int, dir string, ln *net.Listener, http 
 	go c.watchOutOfMemory()
 	go c.watchLuaStatePool()
 	go c.watchAutoGC()
+	go c.watchAOFShrink()
 	go c.backgroundExpiring()
 	defer func() {
 		c.stopBackgroundExpiring.set(true)
 		c.stopWatchingMemory.set(true)
 		c.stopWatchingAutoGC.set(true)
+		c.stopWatchingAutoAOFShrink.set(true)
 	}()
 	handler := func(conn *server.Conn, msg *server.Message, rd *server.PipelineReader, w io.Writer, websocket bool) error {
 		c.connsmu.RLock()
@@ -297,6 +300,25 @@ func (c *Controller) watchAutoGC() {
 			"alloc: %v, heap_alloc: %v, heap_released: %v",
 			mem2.Alloc, mem2.HeapAlloc, mem2.HeapReleased)
 		s = time.Now()
+	}
+}
+func (c *Controller) watchAOFShrink() {
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+	for range t.C {
+		// if c.stopWatchingAutoAOFShrink.on() {
+		// 	return
+		// }
+		autoAOFShrink := c.config.autoAOFShrink()
+		fmt.Printf(" wat wat %s", autoAOFShrink)
+		if !autoAOFShrink {
+			continue
+		}
+		aofSize := 0 // TODO
+		if aofSize > c.config.AutoShrinkAOFMinSize {
+			c.aofshrink()
+		}
+		log.Debugf("aofshrink()")
 	}
 }
 
@@ -666,6 +688,13 @@ func (c *Controller) command(
 		res, err = c.cmdFollow(msg)
 	case "readonly":
 		res, err = c.cmdReadOnly(msg)
+	case "autoaofshrink":
+		res, err = c.cmdReadOnly(msg)
+		if !c.config.autoAOFShrink() {
+			c.config.setAutoAOFShrink(true)
+			return
+		}
+		c.config.setAutoAOFShrink(false)
 	case "stats":
 		res, err = c.cmdStats(msg)
 	case "server":

@@ -74,7 +74,7 @@ Basic Options:
   -v          : enable verbose logging
   -vv         : enable very verbose logging
 
-Advanced Options: 
+Advanced Options:
   --pidfile path          : file that contains the pid
   --appendonly yes/no     : AOF persistence (default: yes)
   --appendonlyfile path   : AOF path (default: data/appendonly.aof)
@@ -281,9 +281,9 @@ Developer Options:
   |       |       |
   |____   |   _   |   Tile38 %s%s %d bit (%s/%s)
   |       |       |   %sPort: %d, PID: %d
-  |____   |   _   | 
+  |____   |   _   |
   |       |       |   tile38.com
-  |_______|_______| 
+  |_______|_______|
 `+"\n", core.Version, gitsha, strconv.IntSize, runtime.GOARCH, runtime.GOOS, hostd, port, os.Getpid())
 	if pidferr != nil {
 		log.Warnf("pidfile: %v", pidferr)
