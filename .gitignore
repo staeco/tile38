@@ -1,6 +1,7 @@
 .DS_Store
 tile38-*
 !cmd/tile38-*
+*.test
 coverage.out
 packages/
 

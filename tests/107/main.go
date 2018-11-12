@@ -18,9 +18,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/tile38/controller"
+	"github.com/tidwall/tile38/internal/server"
 )
 
 const tile38Port = 9191
@@ -31,7 +31,6 @@ var tile38Addr string
 var httpAddr string
 
 var wd string
-var server string
 
 var minX float64
 var minY float64
@@ -101,7 +100,7 @@ func main() {
 
 func startTile38Server() {
 	log.Println("start tile38 server")
-	err := controller.ListenAndServe("localhost", tile38Port, "data")
+	err := server.Serve("localhost", tile38Port, "data", false)
 	if err != nil {
 		log.Fatal(err)
 	}

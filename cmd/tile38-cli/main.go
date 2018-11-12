@@ -14,9 +14,10 @@ import (
 	"strings"
 
 	"github.com/peterh/liner"
+	"github.com/tidwall/gjson"
 	"github.com/tidwall/resp"
-	"github.com/tidwall/tile38/pkg/client"
-	"github.com/tidwall/tile38/pkg/core"
+	"github.com/tidwall/tile38/cmd/tile38-cli/internal/client"
+	"github.com/tidwall/tile38/core"
 )
 
 func userHomeDir() string {
@@ -44,7 +45,6 @@ var (
 	output     = "json"
 	port       = 9851
 	oneCommand string
-	tokml      bool
 	raw        bool
 	noprompt   bool
 	tty        bool
@@ -105,8 +105,6 @@ func parseArgs() bool {
 		switch arg {
 		default:
 			return badArg(arg)
-		case "-kml":
-			tokml = true
 		case "--raw":
 			raw = true
 		case "--tty":
@@ -292,9 +290,8 @@ func main() {
 						if err != io.EOF {
 							fmt.Fprintln(os.Stderr, err.Error())
 							return
-						} else {
-							fmt.Fprintln(os.Stderr, refusedErrorString(addr))
 						}
+						fmt.Fprintln(os.Stderr, refusedErrorString(addr))
 					}
 				}
 			} else {
@@ -350,16 +347,15 @@ func main() {
 						fmt.Fprintln(os.Stderr, "(error) "+cerr.Err)
 						mustOutput = false
 					}
-				} else if string(msg) == client.LiveJSON {
+				} else if gjson.GetBytes(msg, "command").String() == "psubscribe" ||
+					gjson.GetBytes(msg, "command").String() == "subscribe" ||
+					string(msg) == client.LiveJSON {
 					fmt.Fprintln(os.Stderr, string(msg))
 					livemode = true
 					break // break out of prompt and just feed data to screen
 				}
 				if mustOutput {
-					if tokml {
-						msg = convert2kml(msg)
-						fmt.Fprintln(os.Stdout, string(msg))
-					} else if output == "resp" {
+					if output == "resp" {
 						if !raw {
 							msg = convert2termresp(msg)
 						}
@@ -444,35 +440,6 @@ func numlen(n int) int {
 		n = n / 10
 	}
 	return l
-}
-
-func convert2kml(msg []byte) []byte {
-	k := NewKML()
-	var m map[string]interface{}
-	if err := json.Unmarshal(msg, &m); err == nil {
-		if v, ok := m["points"].([]interface{}); ok {
-			for _, v := range v {
-				if v, ok := v.(map[string]interface{}); ok {
-					if v, ok := v["point"].(map[string]interface{}); ok {
-						var name string
-						var lat, lon float64
-						if v, ok := v["id"].(string); ok {
-							name = v
-						}
-						if v, ok := v["lat"].(float64); ok {
-							lat = v
-						}
-						if v, ok := v["lon"].(float64); ok {
-							lon = v
-						}
-						k.AddPoint(name, lat, lon)
-					}
-				}
-			}
-		}
-		return k.Bytes()
-	}
-	return []byte(`{"ok":false,"err":"results must contain points"}`)
 }
 
 func help(arg string) error {

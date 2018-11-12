@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/tidwall/gjson"
 )
 
@@ -354,7 +354,6 @@ func keys_WHEREIN_test(mc *mockServer) error {
 		{"WITHIN", "mykey", "WHEREIN", "a", 3, 0, 1, 2, "BOUNDS", 32.8, -115.2, 33.2, -114.8}, {`[0 [[myid_a1 {"type":"Point","coordinates":[-115,33]} [a 1]] [myid_a2 {"type":"Point","coordinates":[-115,32.99]} [a 2]]]]`},
 	})
 }
-
 
 func keys_WHEREEVAL_test(mc *mockServer) error {
 	return mc.DoBatch([][]interface{}{
