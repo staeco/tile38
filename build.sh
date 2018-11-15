@@ -4,7 +4,7 @@ set -e
 cd $(dirname "${BASH_SOURCE[0]}")
 OD="$(pwd)"
 
-VERSION=1.14.0
+VERSION=1.14.1
 PROTECTED_MODE="no"
 
 # Hardcode some values to the core package
