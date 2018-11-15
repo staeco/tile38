@@ -7,13 +7,19 @@ var DevMode = false
 var ShowDebugMessages = false
 
 // ProtectedMode forces Tile38 to default in protected mode.
-var ProtectedMode = "yes"
+var ProtectedMode = true
 
 // AppendOnly allows for disabling the appendonly file.
-var AppendOnly = "yes"
+var AppendOnly = true
 
 // AppendFileName allows for custom appendonly file path
 var AppendFileName string
 
 // QueueFileName allows for custom queue.db file path
 var QueueFileName string
+
+// NumThreads is the number of network threads to use.
+var NumThreads int
+
+// Evio set the networking to use the evio package.
+var Evio = false

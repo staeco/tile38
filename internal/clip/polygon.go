@@ -30,7 +30,7 @@ func clipPolygon(
 		holes = newPoints[1:]
 	}
 	newPoly := geojson.NewPolygon(
-		geometry.NewPoly(exterior, holes, geometry.DefaultIndex),
+		geometry.NewPoly(exterior, holes, nil),
 	)
 	if newPoly.Empty() {
 		return geojson.NewMultiPolygon(nil)

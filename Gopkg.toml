@@ -23,7 +23,8 @@
 required = [
   "github.com/tidwall/lotsa", 
   "github.com/mmcloughlin/geohash", 
-  "github.com/tidwall/geojson"
+  "github.com/tidwall/geojson",
+  "github.com/tidwall/evio"
 ]
 
 [[constraint]]
@@ -39,16 +40,16 @@ required = [
   version = "1.1.0"
 
 [[constraint]]
-  name = "github.com/garyburd/redigo"
-  version = "1.1.0"
-
-[[constraint]]
   branch = "master"
   name = "github.com/golang/protobuf"
 
 [[constraint]]
   branch = "master"
   name = "github.com/peterh/liner"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/gomodule/redigo"
 
 [[constraint]]
   branch = "master"

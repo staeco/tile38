@@ -31,16 +31,28 @@ func PO(x, y float64) *Point {
 	return NewPoint(P(x, y))
 }
 
+func MPO(points []geometry.Point) *MultiPoint {
+	return NewMultiPoint(points)
+}
+
 func RO(minX, minY, maxX, maxY float64) *Rect {
 	return NewRect(R(minX, minY, maxX, maxY))
 }
 
 func LO(points []geometry.Point) *LineString {
-	return NewLineString(geometry.NewLine(points, geometry.DefaultIndex))
+	return NewLineString(geometry.NewLine(points, nil))
+}
+
+func L(points []geometry.Point) *geometry.Line {
+	return geometry.NewLine(points, geometry.DefaultIndexOptions)
+}
+
+func MLO(lines []*geometry.Line) *MultiLineString {
+	return NewMultiLineString(lines)
 }
 
 func PPO(exterior []geometry.Point, holes [][]geometry.Point) *Polygon {
-	return NewPolygon(geometry.NewPoly(exterior, holes, geometry.DefaultIndex))
+	return NewPolygon(geometry.NewPoly(exterior, holes, nil))
 }
 
 func expectJSON(t testing.TB, data string, expect interface{}) Object {

@@ -16,9 +16,9 @@ import (
 	"syscall"
 
 	"github.com/tidwall/tile38/core"
-	"github.com/tidwall/tile38/internal/controller"
 	"github.com/tidwall/tile38/internal/hservice"
 	"github.com/tidwall/tile38/internal/log"
+	"github.com/tidwall/tile38/internal/server"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -35,7 +35,7 @@ var (
 )
 
 // TODO: Set to false in 2.*
-var httpTransport bool = true
+var httpTransport = true
 
 // Fire up a webhook test server by using the --webhook-http-consumer-port
 // for example
@@ -47,7 +47,7 @@ var httpTransport bool = true
 type hserver struct{}
 
 func (s *hserver) Send(ctx context.Context, in *hservice.MessageRequest) (*hservice.MessageReply, error) {
-	return &hservice.MessageReply{true}, nil
+	return &hservice.MessageReply{Ok: true}, nil
 }
 
 func main() {
@@ -79,6 +79,8 @@ Advanced Options:
   --queuefilename path    : Event queue path (default:data/queue.db)
   --http-transport yes/no : HTTP transport (default: yes)
   --protected-mode yes/no : protected mode (default: yes)
+  --threads num           : number of network threads (default: num cores)
+  --evio yes/no           : use the evio package (default: no)
 
 Developer Options:
   --dev                             : enable developer mode
@@ -145,11 +147,12 @@ Developer Options:
 			if i < len(os.Args) {
 				switch strings.ToLower(os.Args[i]) {
 				case "no":
-					core.ProtectedMode = "no"
+					core.ProtectedMode = false
+					continue
 				case "yes":
-					core.ProtectedMode = "yes"
+					core.ProtectedMode = true
+					continue
 				}
-				continue
 			}
 			fmt.Fprintf(os.Stderr, "protected-mode must be 'yes' or 'no'\n")
 			os.Exit(1)
@@ -161,11 +164,12 @@ Developer Options:
 			if i < len(os.Args) {
 				switch strings.ToLower(os.Args[i]) {
 				case "no":
-					core.AppendOnly = "no"
+					core.AppendOnly = false
+					continue
 				case "yes":
-					core.AppendOnly = "yes"
+					core.AppendOnly = true
+					continue
 				}
-				continue
 			}
 			fmt.Fprintf(os.Stderr, "appendonly must be 'yes' or 'no'\n")
 			os.Exit(1)
@@ -189,12 +193,40 @@ Developer Options:
 				switch strings.ToLower(os.Args[i]) {
 				case "1", "true", "yes":
 					httpTransport = true
+					continue
 				case "0", "false", "no":
 					httpTransport = false
+					continue
 				}
+			}
+			fmt.Fprintf(os.Stderr, "http-transport must be 'yes' or 'no'\n")
+			os.Exit(1)
+		case "--threads", "-threads":
+			i++
+			if i < len(os.Args) {
+				n, err := strconv.ParseUint(os.Args[i], 10, 16)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "threads must be a valid number\n")
+					os.Exit(1)
+				}
+				core.NumThreads = int(n)
 				continue
 			}
 			fmt.Fprintf(os.Stderr, "http-transport must be 'yes' or 'no'\n")
+			os.Exit(1)
+		case "--evio", "-evio":
+			i++
+			if i < len(os.Args) {
+				switch strings.ToLower(os.Args[i]) {
+				case "no":
+					core.Evio = false
+					continue
+				case "yes":
+					core.Evio = true
+					continue
+				}
+			}
+			fmt.Fprintf(os.Stderr, "evio must be 'yes' or 'no'\n")
 			os.Exit(1)
 		}
 		nargs = append(nargs, os.Args[i])
@@ -294,7 +326,7 @@ Developer Options:
 	if pidferr != nil {
 		log.Warnf("pidfile: %v", pidferr)
 	}
-	if err := controller.ListenAndServe(host, port, dir, httpTransport); err != nil {
+	if err := server.Serve(host, port, dir, httpTransport); err != nil {
 		log.Fatal(err)
 	}
 }

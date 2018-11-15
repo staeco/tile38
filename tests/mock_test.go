@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/tidwall/tile38/core"
-	"github.com/tidwall/tile38/internal/controller"
 	tlog "github.com/tidwall/tile38/internal/log"
+	"github.com/tidwall/tile38/internal/server"
 )
 
 var errTimeout = errors.New("timeout")
@@ -51,7 +51,7 @@ func mockOpenServer() (*mockServer, error) {
 	s := &mockServer{port: port}
 	tlog.SetOutput(logOutput)
 	go func() {
-		if err := controller.ListenAndServe("localhost", port, dir, true); err != nil {
+		if err := server.Serve("localhost", port, dir, true); err != nil {
 			log.Fatal(err)
 		}
 	}()

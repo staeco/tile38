@@ -19,13 +19,17 @@ var tty bool
 // 1: normal  - show everything except debug and warn
 // 2: verbose - show everything except debug
 // 3: very verbose - show everything
-var Level int = 1
+var Level = 1
 
 // SetOutput sets the output of the logger
 func SetOutput(w io.Writer) {
 	f, ok := w.(*os.File)
 	tty = ok && terminal.IsTerminal(int(f.Fd()))
 	wr = w
+}
+
+func init() {
+	SetOutput(os.Stderr)
 }
 
 func log(level int, tag, color string, formatted bool, format string, args ...interface{}) {
@@ -57,47 +61,96 @@ func log(level int, tag, color string, formatted bool, format string, args ...in
 	mu.Unlock()
 }
 
+var emptyFormat string
+
+// Infof ...
 func Infof(format string, args ...interface{}) {
-	log(1, "INFO", "\x1b[36m", true, format, args...)
+	if Level >= 1 {
+		log(1, "INFO", "\x1b[36m", true, format, args...)
+	}
 }
+
+// Info ...
 func Info(args ...interface{}) {
-	log(1, "INFO", "\x1b[36m", false, "", args...)
+	if Level >= 1 {
+		log(1, "INFO", "\x1b[36m", false, emptyFormat, args...)
+	}
 }
+
+// HTTPf ...
 func HTTPf(format string, args ...interface{}) {
-	log(1, "HTTP", "\x1b[1m\x1b[30m", true, format, args...)
+	if Level >= 1 {
+		log(1, "HTTP", "\x1b[1m\x1b[30m", true, format, args...)
+	}
 }
+
+// HTTP ...
 func HTTP(args ...interface{}) {
-	log(1, "HTTP", "\x1b[1m\x1b[30m", false, "", args...)
+	if Level >= 1 {
+		log(1, "HTTP", "\x1b[1m\x1b[30m", false, emptyFormat, args...)
+	}
 }
+
+// Errorf ...
 func Errorf(format string, args ...interface{}) {
-	log(1, "ERRO", "\x1b[1m\x1b[31m", true, format, args...)
+	if Level >= 1 {
+		log(1, "ERRO", "\x1b[1m\x1b[31m", true, format, args...)
+	}
 }
+
+// Error ..
 func Error(args ...interface{}) {
-	log(1, "ERRO", "\x1b[1m\x1b[31m", false, "", args...)
+	if Level >= 1 {
+		log(1, "ERRO", "\x1b[1m\x1b[31m", false, emptyFormat, args...)
+	}
 }
+
+// Warnf ...
 func Warnf(format string, args ...interface{}) {
-	log(2, "WARN", "\x1b[33m", true, format, args...)
+	if Level >= 2 {
+		log(2, "WARN", "\x1b[33m", true, format, args...)
+	}
 }
+
+// Warn ...
 func Warn(args ...interface{}) {
-	log(2, "WARN", "\x1b[33m", false, "", args...)
+	if Level >= 2 {
+		log(2, "WARN", "\x1b[33m", false, emptyFormat, args...)
+	}
 }
+
+// Debugf ...
 func Debugf(format string, args ...interface{}) {
-	log(3, "DEBU", "\x1b[35m", true, format, args...)
+	if Level >= 3 {
+		log(3, "DEBU", "\x1b[35m", true, format, args...)
+	}
 }
+
+// Debug ...
 func Debug(args ...interface{}) {
-	log(3, "DEBU", "\x1b[35m", false, "", args...)
+	if Level >= 3 {
+		log(3, "DEBU", "\x1b[35m", false, emptyFormat, args...)
+	}
 }
+
+// Printf ...
 func Printf(format string, args ...interface{}) {
 	Infof(format, args...)
 }
+
+// Print ...
 func Print(format string, args ...interface{}) {
 	Info(args...)
 }
+
+// Fatalf ...
 func Fatalf(format string, args ...interface{}) {
 	log(1, "FATA", "x1b[31m", true, format, args...)
 	os.Exit(1)
 }
+
+// Fatal ...
 func Fatal(args ...interface{}) {
-	log(1, "FATA", "\x1b[31m", false, "", args...)
+	log(1, "FATA", "\x1b[31m", false, emptyFormat, args...)
 	os.Exit(1)
 }

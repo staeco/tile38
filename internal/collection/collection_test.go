@@ -230,7 +230,7 @@ func TestCollectionScan(t *testing.T) {
 	}
 	var n int
 	var prevID string
-	c.Scan(false, func(id string, obj geojson.Object, fields []float64) bool {
+	c.Scan(false, nil, func(id string, obj geojson.Object, fields []float64) bool {
 		if n > 0 {
 			expect(t, id > prevID)
 		}
@@ -241,7 +241,7 @@ func TestCollectionScan(t *testing.T) {
 	})
 	expect(t, n == c.Count())
 	n = 0
-	c.Scan(true, func(id string, obj geojson.Object, fields []float64) bool {
+	c.Scan(true, nil, func(id string, obj geojson.Object, fields []float64) bool {
 		if n > 0 {
 			expect(t, id < prevID)
 		}
@@ -253,7 +253,7 @@ func TestCollectionScan(t *testing.T) {
 	expect(t, n == c.Count())
 
 	n = 0
-	c.ScanRange("0060", "0070", false,
+	c.ScanRange("0060", "0070", false, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			if n > 0 {
 				expect(t, id > prevID)
@@ -266,7 +266,7 @@ func TestCollectionScan(t *testing.T) {
 	expect(t, n == 10)
 
 	n = 0
-	c.ScanRange("0070", "0060", true,
+	c.ScanRange("0070", "0060", true, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			if n > 0 {
 				expect(t, id < prevID)
@@ -279,7 +279,7 @@ func TestCollectionScan(t *testing.T) {
 	expect(t, n == 10)
 
 	n = 0
-	c.ScanGreaterOrEqual("0070", true,
+	c.ScanGreaterOrEqual("0070", true, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			if n > 0 {
 				expect(t, id < prevID)
@@ -292,7 +292,7 @@ func TestCollectionScan(t *testing.T) {
 	expect(t, n == 71)
 
 	n = 0
-	c.ScanGreaterOrEqual("0070", false,
+	c.ScanGreaterOrEqual("0070", false, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			if n > 0 {
 				expect(t, id > prevID)
@@ -317,7 +317,7 @@ func TestCollectionSearch(t *testing.T) {
 	}
 	var n int
 	var prevValue string
-	c.SearchValues(false, func(id string, obj geojson.Object, fields []float64) bool {
+	c.SearchValues(false, nil, func(id string, obj geojson.Object, fields []float64) bool {
 		if n > 0 {
 			expect(t, obj.String() > prevValue)
 		}
@@ -328,7 +328,7 @@ func TestCollectionSearch(t *testing.T) {
 	})
 	expect(t, n == c.Count())
 	n = 0
-	c.SearchValues(true, func(id string, obj geojson.Object, fields []float64) bool {
+	c.SearchValues(true, nil, func(id string, obj geojson.Object, fields []float64) bool {
 		if n > 0 {
 			expect(t, obj.String() < prevValue)
 		}
@@ -340,7 +340,7 @@ func TestCollectionSearch(t *testing.T) {
 	expect(t, n == c.Count())
 
 	n = 0
-	c.SearchValuesRange("0060", "0070", false,
+	c.SearchValuesRange("0060", "0070", false, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			if n > 0 {
 				expect(t, obj.String() > prevValue)
@@ -353,7 +353,7 @@ func TestCollectionSearch(t *testing.T) {
 	expect(t, n == 10)
 
 	n = 0
-	c.SearchValuesRange("0070", "0060", true,
+	c.SearchValuesRange("0070", "0060", true, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			if n > 0 {
 				expect(t, obj.String() < prevValue)
@@ -436,7 +436,7 @@ func TestSpatialSearch(t *testing.T) {
 	var n int
 
 	n = 0
-	c.Within(q1, 0,
+	c.Within(q1, 0, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			n++
 			return true
@@ -445,7 +445,7 @@ func TestSpatialSearch(t *testing.T) {
 	expect(t, n == 3)
 
 	n = 0
-	c.Within(q2, 0,
+	c.Within(q2, 0, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			n++
 			return true
@@ -454,7 +454,7 @@ func TestSpatialSearch(t *testing.T) {
 	expect(t, n == 7)
 
 	n = 0
-	c.Within(q3, 0,
+	c.Within(q3, 0, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			n++
 			return true
@@ -463,7 +463,7 @@ func TestSpatialSearch(t *testing.T) {
 	expect(t, n == 4)
 
 	n = 0
-	c.Intersects(q1, 0,
+	c.Intersects(q1, 0, nil,
 		func(_ string, _ geojson.Object, _ []float64) bool {
 			n++
 			return true
@@ -472,7 +472,7 @@ func TestSpatialSearch(t *testing.T) {
 	expect(t, n == 4)
 
 	n = 0
-	c.Intersects(q2, 0,
+	c.Intersects(q2, 0, nil,
 		func(_ string, _ geojson.Object, _ []float64) bool {
 			n++
 			return true
@@ -481,7 +481,7 @@ func TestSpatialSearch(t *testing.T) {
 	expect(t, n == 7)
 
 	n = 0
-	c.Intersects(q3, 0,
+	c.Intersects(q3, 0, nil,
 		func(_ string, _ geojson.Object, _ []float64) bool {
 			n++
 			return true
@@ -490,7 +490,7 @@ func TestSpatialSearch(t *testing.T) {
 	expect(t, n == 5)
 
 	n = 0
-	c.Intersects(q3, 0,
+	c.Intersects(q3, 0, nil,
 		func(_ string, _ geojson.Object, _ []float64) bool {
 			n++
 			return n <= 1
@@ -502,7 +502,7 @@ func TestSpatialSearch(t *testing.T) {
 	exitems := []geojson.Object{
 		r2, p1, p4, r1, p3, r3, p2,
 	}
-	c.Nearby(q4,
+	c.Nearby(q4, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			items = append(items, obj)
 			return true
@@ -528,7 +528,7 @@ func TestCollectionSparse(t *testing.T) {
 	}
 	var n int
 	n = 0
-	c.Within(rect, 1,
+	c.Within(rect, 1, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			n++
 			return true
@@ -537,7 +537,7 @@ func TestCollectionSparse(t *testing.T) {
 	expect(t, n == 4)
 
 	n = 0
-	c.Within(rect, 2,
+	c.Within(rect, 2, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			n++
 			return true
@@ -546,7 +546,7 @@ func TestCollectionSparse(t *testing.T) {
 	expect(t, n == 16)
 
 	n = 0
-	c.Within(rect, 3,
+	c.Within(rect, 3, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			n++
 			return true
@@ -555,7 +555,7 @@ func TestCollectionSparse(t *testing.T) {
 	expect(t, n == 64)
 
 	n = 0
-	c.Within(rect, 3,
+	c.Within(rect, 3, nil,
 		func(id string, obj geojson.Object, fields []float64) bool {
 			n++
 			return n <= 30
@@ -564,7 +564,7 @@ func TestCollectionSparse(t *testing.T) {
 	expect(t, n == 31)
 
 	n = 0
-	c.Intersects(rect, 3,
+	c.Intersects(rect, 3, nil,
 		func(id string, _ geojson.Object, _ []float64) bool {
 			n++
 			return true
@@ -573,7 +573,7 @@ func TestCollectionSparse(t *testing.T) {
 	expect(t, n == 64)
 
 	n = 0
-	c.Intersects(rect, 3,
+	c.Intersects(rect, 3, nil,
 		func(id string, _ geojson.Object, _ []float64) bool {
 			n++
 			return n <= 30

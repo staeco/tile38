@@ -12,20 +12,48 @@ const (
 	earthRadius = 6371e3
 	radians     = math.Pi / 180
 	degrees     = 180 / math.Pi
+	piR         = math.Pi * earthRadius
+	twoPiR      = 2 * piR
 )
 
-// DistanceTo return the distance in meteres between two point.
-func DistanceTo(latA, lonA, latB, lonB float64) (meters float64) {
+// Haversine ...
+func Haversine(latA, lonA, latB, lonB float64) float64 {
 	φ1 := latA * radians
 	λ1 := lonA * radians
 	φ2 := latB * radians
 	λ2 := lonB * radians
 	Δφ := φ2 - φ1
 	Δλ := λ2 - λ1
-	a := math.Sin(Δφ/2)*math.Sin(Δφ/2) +
-		math.Cos(φ1)*math.Cos(φ2)*math.Sin(Δλ/2)*math.Sin(Δλ/2)
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-	return earthRadius * c
+	sΔφ2 := math.Sin(Δφ / 2)
+	sΔλ2 := math.Sin(Δλ / 2)
+	return sΔφ2*sΔφ2 + math.Cos(φ1)*math.Cos(φ2)*sΔλ2*sΔλ2
+}
+
+// NormalizeDistance ...
+func NormalizeDistance(meters float64) float64 {
+	m1 := math.Mod(meters, twoPiR)
+	if m1 <= piR {
+		return m1
+	}
+	return twoPiR - m1
+}
+
+// DistanceToHaversine ...
+func DistanceToHaversine(meters float64) float64 {
+	// convert the given distance to its haversine
+	sin := math.Sin(0.5 * meters / earthRadius)
+	return sin * sin
+}
+
+// DistanceFromHaversine ...
+func DistanceFromHaversine(haversine float64) float64 {
+	return earthRadius * 2 * math.Asin(math.Sqrt(haversine))
+}
+
+// DistanceTo return the distance in meters between two point.
+func DistanceTo(latA, lonA, latB, lonB float64) (meters float64) {
+	a := Haversine(latA, lonA, latB, lonB)
+	return DistanceFromHaversine(a)
 }
 
 // DestinationPoint return the destination from a point based on a
@@ -61,35 +89,83 @@ func BearingTo(latA, lonA, latB, lonB float64) float64 {
 	return math.Mod(θ*degrees+360, 360)
 }
 
-// // SegmentIntersectsCircle ...
-// func SegmentIntersectsCircle(
-// 	startLat, startLon, endLat, endLon, centerLat, centerLon, meters float64,
-// ) bool {
-// 	// These are faster checks.
-// 	// If they succeed there's no need do complicate things.
-// 	if DistanceTo(startLat, startLon, centerLat, centerLon) <= meters {
-// 		return true
-// 	}
-// 	if DistanceTo(endLat, endLon, centerLat, centerLon) <= meters {
-// 		return true
-// 	}
+// RectFromCenter calculates the bounding box surrounding a circle.
+func RectFromCenter(lat, lon, meters float64) (
+	minLat, minLon, maxLat, maxLon float64,
+) {
 
-// 	// Distance between start and end
-// 	l := DistanceTo(startLat, startLon, endLat, endLon)
+	// see http://janmatuschek.de/LatitudeLongitudeBoundingCoordinates#Latitude
+	lat *= radians
+	lon *= radians
 
-// 	// Unit direction vector
-// 	dLat := (endLat - startLat) / l
-// 	dLon := (endLon - startLon) / l
+	r := meters / earthRadius // angular radius
 
-// 	// Point of the line closest to the center
-// 	t := dLon*(centerLon-startLon) + dLat*(centerLat-startLat)
-// 	pLat := t*dLat + startLat
-// 	pLon := t*dLon + startLon
-// 	if pLon < startLon || pLon > endLon || pLat < startLat || pLat > endLat {
-// 		// closest point is outside the segment
-// 		return false
-// 	}
+	minLat = lat - r
+	maxLat = lat + r
 
-// 	// Distance from the closest point to the center
-// 	return DistanceTo(centerLat, centerLon, pLat, pLon) <= meters
-// }
+	latT := math.Asin(math.Sin(lat) / math.Cos(r))
+	lonΔ := math.Acos((math.Cos(r) - math.Sin(latT)*math.Sin(lat)) / (math.Cos(latT) * math.Cos(lat)))
+
+	minLon = lon - lonΔ
+	maxLon = lon + lonΔ
+
+	// Adjust for north poll
+	if maxLat > math.Pi/2 {
+		minLon = -math.Pi
+		maxLat = math.Pi / 2
+		maxLon = math.Pi
+	}
+
+	// Adjust for south poll
+	if minLat < -math.Pi/2 {
+		minLat = -math.Pi / 2
+		minLon = -math.Pi
+		maxLon = math.Pi
+	}
+
+	// Adjust for wraparound. Remove this if the commented-out condition below this block is added.
+	if minLon < -math.Pi || maxLon > math.Pi {
+		minLon = -math.Pi
+		maxLon = math.Pi
+	}
+
+	/*
+	   	// Consider splitting area into two bboxes, using the below checks, and erasing above block for performance. See http://janmatuschek.de/LatitudeLongitudeBoundingCoordinates#PolesAnd180thMeridian
+	   	// Adjust for wraparound if minimum longitude is less than -180 degrees.
+	   	if lonMin < -math.Pi {
+	   // box 1:
+	   		latMin = latMin
+	   		latMax = latMax
+	   		lonMin += 2*math.Pi
+	   		lonMax = math.Pi
+	   // box 2:
+	   		latMin = latMin
+	   		latMax = latMax
+	   		lonMin = -math.Pi
+	   		lonMax = lonMax
+	   	}
+	   	// Adjust for wraparound if maximum longitude is greater than 180 degrees.
+	   	if lonMax > math.Pi {
+	   // box 1:
+	   		latMin = latMin
+	   		latMax = latMax
+	   		lonMin = lonMin
+	   		lonMax = -math.Pi
+	   // box 2:
+	   		latMin = latMin
+	   		latMax = latMax
+	   		lonMin = -math.Pi
+	   		lonMax -= 2*math.Pi
+	   	}
+	*/
+
+	minLon = math.Mod(minLon+3*math.Pi, 2*math.Pi) - math.Pi // normalise to -180..+180°
+	maxLon = math.Mod(maxLon+3*math.Pi, 2*math.Pi) - math.Pi
+
+	minLat *= degrees
+	minLon *= degrees
+	maxLat *= degrees
+	maxLon *= degrees
+	return
+
+}

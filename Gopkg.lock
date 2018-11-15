@@ -86,17 +86,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:c955959498f5eb42652958ac60bcd9a7fde78b8d6886f2e5b88513114c902a9c"
-  name = "github.com/garyburd/redigo"
-  packages = [
-    "internal",
-    "redis",
-  ]
-  pruneopts = ""
-  revision = "433969511232c397de61b1442f9fd49ec06ae9ba"
-  version = "v1.1.0"
-
-[[projects]]
   digest = "1:e26d0f8ccaf4087b93306d5e20e4816258116868ad6c6da0f2b4926c72fb92fa"
   name = "github.com/go-ini/ini"
   packages = ["."]
@@ -127,11 +116,27 @@
   revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
+  branch = "master"
+  digest = "1:af269c8136b9422554bd4f1c0a024a7ccde3ef18482131ce10c336af80228e88"
+  name = "github.com/gomodule/redigo"
+  packages = ["redis"]
+  pruneopts = ""
+  revision = "e8fc0692a7e26a05b06517348ed466349062eb47"
+
+[[projects]]
   digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
   pruneopts = ""
   revision = "0b12d6b5"
+
+[[projects]]
+  digest = "1:be1d3b7623f11b628068933282015f3dbcd522fa8e6b16d2931edffd42ef2c0b"
+  name = "github.com/kavu/go_reuseport"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ffa96de2479e10ecd06aca8069bf9c55a86701b5"
+  version = "v1.4.0"
 
 [[projects]]
   branch = "master"
@@ -226,8 +231,19 @@
   revision = "b67b1b8c1658cb01502801c14e33c61e6c4cbb95"
 
 [[projects]]
+  digest = "1:1f7026c4840ae2a06e892ffcad5a36416de0a7e5be33ce65449435fd8f15414b"
+  name = "github.com/tidwall/evio"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = ""
+  revision = "ea610eff86981249be649bbdcedbf409a2db2173"
+  version = "v1.0.1"
+
+[[projects]]
   branch = "master"
-  digest = "1:157eb52179752d4d88f1049aa6c3e4954d6796af5f6bcd54b5ab40f8637805df"
+  digest = "1:3307384a763736cbcfa625076939fe9a240e5f5c9d6ace507fa4fd1f4f6944d6"
   name = "github.com/tidwall/geojson"
   packages = [
     ".",
@@ -235,15 +251,15 @@
     "geometry",
   ]
   pruneopts = ""
-  revision = "8ff3ef500c61617c9f325603cf40863ca7086a1d"
+  revision = "553da6f08f84f544b5482743fe73c3989facc578"
 
 [[projects]]
-  digest = "1:211773b67c5594aa92b1e8389c59558fa4927614507ea38237265e00c0ba6b81"
+  digest = "1:3ddca2bd5496c6922a2a9e636530e178a43c2a534ea6634211acdc7d10222794"
   name = "github.com/tidwall/gjson"
   packages = ["."]
   pruneopts = ""
-  revision = "5a69e67cfd8f6f9b0044ed49f5079d0eeed28653"
-  version = "v1.0.1"
+  revision = "1e3f6aeaa5bad08d777ea7807b279a07885dd8b2"
+  version = "v1.1.3"
 
 [[projects]]
   branch = "master"
@@ -279,11 +295,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:630381558bc538e831db8468dd0dc2702d81789f79b8ddf665eeebc729e2a055"
+  digest = "1:e84d0aa788bd55e938ebbaa62782385ca4da00b63c1d6bf23270c031a2ae9a88"
   name = "github.com/tidwall/redbench"
   packages = ["."]
   pruneopts = ""
-  revision = "637a608ebec1acbf049c2e4a5eda6c2d72aa3af1"
+  revision = "17c5b5b864a4b072481036ac689913156f5bb81c"
 
 [[projects]]
   branch = "master"
@@ -310,12 +326,12 @@
   revision = "d4a8a3d30d5729f85edfba1745241f3a621d0359"
 
 [[projects]]
-  digest = "1:ed6a1c415a0bd35c9c18eec74bfd460a57ba21fb3bc0da629afc275096edffa4"
+  digest = "1:ca969d3e75ed5b3003f4f5864bb5c13d99471ef57f9049bf78562d7ee1ac019c"
   name = "github.com/tidwall/sjson"
   packages = ["."]
   pruneopts = ""
-  revision = "6a22caf2fd45d5e2119bfc3717e984f15a7eb7ee"
-  version = "v1.0.0"
+  revision = "48d34adceb39a5bd6ed7c12f38c78cd425436442"
+  version = "v1.0.2"
 
 [[projects]]
   branch = "master"
@@ -440,8 +456,8 @@
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/sqs",
     "github.com/eclipse/paho.mqtt.golang",
-    "github.com/garyburd/redigo/redis",
     "github.com/golang/protobuf/proto",
+    "github.com/gomodule/redigo/redis",
     "github.com/mmcloughlin/geohash",
     "github.com/nats-io/go-nats",
     "github.com/peterh/liner",
@@ -449,7 +465,9 @@
     "github.com/tidwall/boxtree/d2",
     "github.com/tidwall/btree",
     "github.com/tidwall/buntdb",
+    "github.com/tidwall/evio",
     "github.com/tidwall/geojson",
+    "github.com/tidwall/geojson/geo",
     "github.com/tidwall/geojson/geometry",
     "github.com/tidwall/gjson",
     "github.com/tidwall/lotsa",

@@ -8,7 +8,7 @@ import (
 )
 
 func LO(points []geometry.Point) *geojson.LineString {
-	return geojson.NewLineString(geometry.NewLine(points, geometry.DefaultIndex))
+	return geojson.NewLineString(geometry.NewLine(points, nil))
 }
 
 func RO(minX, minY, maxX, maxY float64) *geojson.Rect {
@@ -19,7 +19,7 @@ func RO(minX, minY, maxX, maxY float64) *geojson.Rect {
 }
 
 func PPO(exterior []geometry.Point, holes [][]geometry.Point) *geojson.Polygon {
-	return geojson.NewPolygon(geometry.NewPoly(exterior, holes, geometry.DefaultIndex))
+	return geojson.NewPolygon(geometry.NewPoly(exterior, holes, nil))
 }
 
 func TestClipLineStringSimple(t *testing.T) {

@@ -11,7 +11,7 @@ func clipRect(rect *geojson.Rect, clipper geojson.Object) geojson.Object {
 	for i := 0; i < len(points); i++ {
 		points[i] = base.PointAt(i)
 	}
-	poly := geometry.NewPoly(points, nil, geometry.DefaultIndex)
+	poly := geometry.NewPoly(points, nil, nil)
 	gPoly := geojson.NewPolygon(poly)
 	return Clip(gPoly, clipper)
 }
