@@ -1,4 +1,5 @@
 FROM golang:1.10 as build_image
+ARG LDFLAGS
 RUN apt install python
 RUN mkdir -p /app/data
 
