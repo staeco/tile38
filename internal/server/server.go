@@ -278,7 +278,7 @@ func Serve(host string, port int, dir string, http bool) error {
 }
 
 func (server *Server) isProtected() bool {
-	if core.ProtectedMode == false {
+	if core.ProtectedMode == "no" {
 		// --protected-mode no
 		return false
 	}
