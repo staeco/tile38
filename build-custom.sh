@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-export TAG=circleci-1.14.0
+export TAG=circleci-1.14.1
 
 docker build -f Dockerfile.Custom -t staeco/tile38:${TAG} .
 
