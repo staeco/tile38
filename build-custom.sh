@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-export VERSION=1.14.1
+export VERSION=1.14.2
 export TAG=circleci-${VERSION}
 export LDFLAGS="-X github.com/tidwall/tile38/core.Version=${VERSION}"
 
