@@ -147,10 +147,10 @@ Developer Options:
 			if i < len(os.Args) {
 				switch strings.ToLower(os.Args[i]) {
 				case "no":
-					core.ProtectedMode = false
+					core.ProtectedMode = "no"
 					continue
 				case "yes":
-					core.ProtectedMode = true
+					core.ProtectedMode = "yes"
 					continue
 				}
 			}

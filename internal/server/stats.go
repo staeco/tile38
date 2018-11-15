@@ -115,6 +115,7 @@ func (c *Server) cmdServer(msg *Message) (res resp.Value, err error) {
 	m["heap_released"] = mem.HeapReleased
 	m["max_heap_size"] = c.config.maxMemory()
 	m["avg_item_size"] = avgsz
+	m["version"] = core.Version
 	m["pointer_size"] = (32 << uintptr(uint64(^uintptr(0))>>63)) / 8
 	m["read_only"] = c.config.readOnly()
 	m["cpus"] = runtime.NumCPU()

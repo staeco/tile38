@@ -54,7 +54,6 @@ func (server *Server) loadAOF() error {
 	var buf []byte
 	var args [][]byte
 	var packet [0xFFFF]byte
-	var msg Message
 	for {
 		n, err := server.aof.Read(packet[:])
 		if err != nil {
@@ -81,6 +80,7 @@ func (server *Server) loadAOF() error {
 				break
 			}
 			if len(args) > 0 {
+				var msg Message
 				msg.Args = msg.Args[:0]
 				for _, arg := range args {
 					msg.Args = append(msg.Args, string(arg))
