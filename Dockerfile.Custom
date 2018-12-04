@@ -1,0 +1,18 @@
+FROM golang:1.10 as build_image
+RUN apt install python
+RUN mkdir -p /app/data
+
+WORKDIR /app
+# RUN wget -q https://github.com/contra/boundaries/raw/master/tile38.tar.gz
+# RUN tar -xf tile38.tar.gz
+# RUN rm tile38.tar.gz
+
+ADD . /app
+
+# RUN mv /app/tile38/commands.log /app/commands.log
+RUN ./build.sh
+RUN chmod +x ./start.sh
+
+EXPOSE 8081
+EXPOSE 9851
+CMD ["/app/start.sh"]
