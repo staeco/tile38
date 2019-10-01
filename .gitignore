@@ -2,9 +2,11 @@
 tile38-*
 !cmd/tile38-*
 *.test
-data*/
 coverage.out
 packages/
+
+data/appendonly.aof
+data/queue.db
 
 # Ignore IDE folders
 .idea/
