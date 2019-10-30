@@ -30,6 +30,10 @@ required = [
   name = "github.com/tidwall/tinybtree"
 
 [[constraint]]
+  name = "github.com/tidwall/rhh"
+  version = "1.1.0"
+
+[[constraint]]
   name = "github.com/tidwall/geojson"
   version = "1.1.7"
 

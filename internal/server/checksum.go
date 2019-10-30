@@ -14,12 +14,12 @@ import (
 )
 
 // checksum performs a simple md5 checksum on the aof file
-func (c *Server) checksum(pos, size int64) (sum string, err error) {
-	if pos+size > int64(c.aofsz) {
+func (s *Server) checksum(pos, size int64) (sum string, err error) {
+	if pos+size > int64(s.aofsz) {
 		return "", io.EOF
 	}
 	var f *os.File
-	f, err = os.Open(c.aof.Name())
+	f, err = os.Open(s.aof.Name())
 	if err != nil {
 		return
 	}
@@ -27,7 +27,7 @@ func (c *Server) checksum(pos, size int64) (sum string, err error) {
 	sumr := md5.New()
 	err = func() error {
 		if size == 0 {
-			n, err := f.Seek(int64(c.aofsz), 0)
+			n, err := f.Seek(int64(s.aofsz), 0)
 			if err != nil {
 				return err
 			}
@@ -74,8 +74,8 @@ func connAOFMD5(conn *RESPConn, pos, size int64) (sum string, err error) {
 	return sum, nil
 }
 
-func (c *Server) matchChecksums(conn *RESPConn, pos, size int64) (match bool, err error) {
-	sum, err := c.checksum(pos, size)
+func (s *Server) matchChecksums(conn *RESPConn, pos, size int64) (match bool, err error) {
+	sum, err := s.checksum(pos, size)
 	if err != nil {
 		if err == io.EOF {
 			return false, nil
@@ -138,16 +138,16 @@ func getEndOfLastValuePositionInFile(fname string, startPos int64) (int64, error
 
 // followCheckSome is not a full checksum. It just "checks some" data.
 // We will do some various checksums on the leader until we find the correct position to start at.
-func (c *Server) followCheckSome(addr string, followc int) (pos int64, err error) {
+func (s *Server) followCheckSome(addr string, followc int) (pos int64, err error) {
 	if core.ShowDebugMessages {
 		log.Debug("follow:", addr, ":check some")
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.followc.get() != followc {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.followc.get() != followc {
 		return 0, errNoLongerFollowing
 	}
-	if c.aofsz < checksumsz {
+	if s.aofsz < checksumsz {
 		return 0, nil
 	}
 
@@ -158,9 +158,9 @@ func (c *Server) followCheckSome(addr string, followc int) (pos int64, err error
 	defer conn.Close()
 
 	min := int64(0)
-	max := int64(c.aofsz) - checksumsz
-	limit := int64(c.aofsz)
-	match, err := c.matchChecksums(conn, min, checksumsz)
+	max := int64(s.aofsz) - checksumsz
+	limit := int64(s.aofsz)
+	match, err := s.matchChecksums(conn, min, checksumsz)
 	if err != nil {
 		return 0, err
 	}
@@ -172,7 +172,7 @@ func (c *Server) followCheckSome(addr string, followc int) (pos int64, err error
 				pos = min
 				break
 			} else {
-				match, err = c.matchChecksums(conn, max, checksumsz)
+				match, err = s.matchChecksums(conn, max, checksumsz)
 				if err != nil {
 					return 0, err
 				}
@@ -186,10 +186,10 @@ func (c *Server) followCheckSome(addr string, followc int) (pos int64, err error
 		}
 	}
 	fullpos := pos
-	fname := c.aof.Name()
+	fname := s.aof.Name()
 	if pos == 0 {
-		c.aof.Close()
-		c.aof, err = os.Create(fname)
+		s.aof.Close()
+		s.aof, err = os.Create(fname)
 		if err != nil {
 			log.Fatalf("could not recreate aof, possible data loss. %s", err.Error())
 			return 0, err
@@ -199,7 +199,7 @@ func (c *Server) followCheckSome(addr string, followc int) (pos int64, err error
 
 	// we want to truncate at a command location
 	// search for nearest command
-	pos, err = getEndOfLastValuePositionInFile(c.aof.Name(), fullpos)
+	pos, err = getEndOfLastValuePositionInFile(s.aof.Name(), fullpos)
 	if err != nil {
 		return 0, err
 	}
@@ -211,24 +211,24 @@ func (c *Server) followCheckSome(addr string, followc int) (pos int64, err error
 	}
 	log.Warnf("truncating aof to %d", pos)
 	// any errror below are fatal.
-	c.aof.Close()
+	s.aof.Close()
 	if err := os.Truncate(fname, pos); err != nil {
 		log.Fatalf("could not truncate aof, possible data loss. %s", err.Error())
 		return 0, err
 	}
-	c.aof, err = os.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0600)
+	s.aof, err = os.OpenFile(fname, os.O_CREATE|os.O_RDWR, 0600)
 	if err != nil {
 		log.Fatalf("could not create aof, possible data loss. %s", err.Error())
 		return 0, err
 	}
 	// reset the entire system.
 	log.Infof("reloading aof commands")
-	c.reset()
-	if err := c.loadAOF(); err != nil {
+	s.reset()
+	if err := s.loadAOF(); err != nil {
 		log.Fatalf("could not reload aof, possible data loss. %s", err.Error())
 		return 0, err
 	}
-	if int64(c.aofsz) != pos {
+	if int64(s.aofsz) != pos {
 		log.Fatalf("aof size mismatch during reload, possible data loss.")
 		return 0, errors.New("?")
 	}

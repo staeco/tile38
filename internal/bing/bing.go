@@ -112,11 +112,11 @@ func TileXYToPixelXY(tileX, tileY int64) (pixelX, pixelY int64) {
 	return tileX << 8, tileY << 8
 }
 
-/// TileXYToQuadKey converts tile XY coordinates into a QuadKey at a specified level of detail.
-/// Param 'tileX' is the tile X coordinate.
-/// Param 'tileY' is the tile Y coordinate.
-/// Param 'levelOfDetail' is the Level of detail, from 1 (lowest detail) to N (highest detail).
-/// Returns a string containing the QuadKey.
+// TileXYToQuadKey converts tile XY coordinates into a QuadKey at a specified level of detail.
+// Param 'tileX' is the tile X coordinate.
+// Param 'tileY' is the tile Y coordinate.
+// Param 'levelOfDetail' is the Level of detail, from 1 (lowest detail) to N (highest detail).
+// Returns a string containing the QuadKey.
 func TileXYToQuadKey(tileX, tileY int64, levelOfDetail uint64) string {
 	quadKey := make([]byte, levelOfDetail)
 	for i, j := levelOfDetail, 0; i > 0; i, j = i-1, j+1 {
@@ -136,11 +136,11 @@ func TileXYToQuadKey(tileX, tileY int64, levelOfDetail uint64) string {
 	return string(quadKey)
 }
 
-/// QuadKeyToTileXY converts a QuadKey into tile XY coordinates.
-/// Param 'quadKey' is the quadKey of the tile.
-/// Return value 'tileX' is the output parameter receiving the tile X coordinate.
-/// Return value 'tileY is the output parameter receiving the tile Y coordinate.
-/// Return value 'levelOfDetail' is the output parameter receiving the level of detail.
+// QuadKeyToTileXY converts a QuadKey into tile XY coordinates.
+// Param 'quadKey' is the quadKey of the tile.
+// Return value 'tileX' is the output parameter receiving the tile X coordinate.
+// Return value 'tileY is the output parameter receiving the tile Y coordinate.
+// Return value 'levelOfDetail' is the output parameter receiving the level of detail.
 func QuadKeyToTileXY(quadKey string) (tileX, tileY int64, levelOfDetail uint64) {
 	levelOfDetail = uint64(len(quadKey))
 	for i := levelOfDetail; i > 0; i-- {

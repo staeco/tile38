@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yuin/gopher-lua"
+	lua "github.com/yuin/gopher-lua"
 )
 
 const defaultSearchOutput = outputObjects
@@ -249,7 +249,7 @@ type searchScanBaseTokens struct {
 	clip       bool
 }
 
-func (c *Server) parseSearchScanBaseTokens(
+func (s *Server) parseSearchScanBaseTokens(
 	cmd string, t searchScanBaseTokens, vs []string,
 ) (
 	vsout []string, tout searchScanBaseTokens, err error,
@@ -380,7 +380,7 @@ func (c *Server) parseSearchScanBaseTokens(
 				}
 
 				var luaState *lua.LState
-				luaState, err = c.luapool.Get()
+				luaState, err = s.luapool.Get()
 				if err != nil {
 					return
 				}
@@ -406,7 +406,7 @@ func (c *Server) parseSearchScanBaseTokens(
 						"ARGV": argsTbl,
 					})
 
-				compiled, ok := c.luascripts.Get(shaSum)
+				compiled, ok := s.luascripts.Get(shaSum)
 				var fn *lua.LFunction
 				if ok {
 					fn = &lua.LFunction{
@@ -426,9 +426,9 @@ func (c *Server) parseSearchScanBaseTokens(
 						err = makeSafeErr(err)
 						return
 					}
-					c.luascripts.Put(shaSum, fn.Proto)
+					s.luascripts.Put(shaSum, fn.Proto)
 				}
-				t.whereevals = append(t.whereevals, whereevalT{c, luaState, fn})
+				t.whereevals = append(t.whereevals, whereevalT{s, luaState, fn})
 				continue
 			case "nofields":
 				vs = nvs
@@ -686,5 +686,140 @@ func (c *Server) parseSearchScanBaseTokens(
 	}
 	vsout = vs
 	tout = t
+	return
+}
+
+type parentStack []*areaExpression
+
+func (ps *parentStack) isEmpty() bool {
+	return len(*ps) == 0
+}
+
+func (ps *parentStack) push(e *areaExpression) {
+	*ps = append(*ps, e)
+}
+
+func (ps *parentStack) pop() (e *areaExpression, empty bool) {
+	n := len(*ps)
+	if n == 0 {
+		return nil, true
+	}
+	x := (*ps)[n-1]
+	*ps = (*ps)[:n-1]
+	return x, false
+}
+
+func (s *Server) parseAreaExpression(vsin []string, doClip bool) (vsout []string, ae *areaExpression, err error) {
+	ps := &parentStack{}
+	vsout = vsin[:]
+	var negate, needObj bool
+loop:
+	for {
+		nvs, wtok, ok := tokenval(vsout)
+		if !ok || len(wtok) == 0 {
+			break
+		}
+		switch strings.ToLower(wtok) {
+		case tokenLParen:
+			newExpr := &areaExpression{negate: negate, op: NOOP}
+			negate = false
+			needObj = false
+			if ae != nil {
+				ae.children = append(ae.children, newExpr)
+			}
+			ae = newExpr
+			ps.push(ae)
+			vsout = nvs
+		case tokenRParen:
+			if needObj {
+				err = errInvalidArgument(tokenRParen)
+				return
+			}
+			parent, empty := ps.pop()
+			if empty {
+				err = errInvalidArgument(tokenRParen)
+				return
+			}
+			ae = parent
+			vsout = nvs
+		case tokenNOT:
+			negate = !negate
+			needObj = true
+			vsout = nvs
+		case tokenAND:
+			if needObj {
+				err = errInvalidArgument(tokenAND)
+				return
+			}
+			needObj = true
+			if ae == nil {
+				err = errInvalidArgument(tokenAND)
+				return
+			} else if ae.obj == nil {
+				switch ae.op {
+				case OR:
+					numChildren := len(ae.children)
+					if numChildren < 2 {
+						err = errInvalidNumberOfArguments
+						return
+					}
+					ae.children = append(
+						ae.children[:numChildren-1],
+						&areaExpression{
+							op:       AND,
+							children: []*areaExpression{ae.children[numChildren-1]}})
+				case NOOP:
+					ae.op = AND
+				}
+			} else {
+				ae = &areaExpression{op: AND, children: []*areaExpression{ae}}
+			}
+			vsout = nvs
+		case tokenOR:
+			if needObj {
+				err = errInvalidArgument(tokenOR)
+				return
+			}
+			needObj = true
+			if ae == nil {
+				err = errInvalidArgument(tokenOR)
+				return
+			} else if ae.obj == nil {
+				switch ae.op {
+				case AND:
+					if len(ae.children) < 2 {
+						err = errInvalidNumberOfArguments
+						return
+					}
+					ae = &areaExpression{op: OR, children: []*areaExpression{ae}}
+				case NOOP:
+					ae.op = OR
+				}
+			} else {
+				ae = &areaExpression{op: OR, children: []*areaExpression{ae}}
+			}
+			vsout = nvs
+		case "point", "circle", "object", "bounds", "hash", "quadkey", "tile", "get":
+			parsedVs, parsedObj, areaErr := s.parseArea(vsout, doClip)
+			if areaErr != nil {
+				err = areaErr
+				return
+			}
+			newExpr := &areaExpression{negate: negate, obj: parsedObj, op: NOOP}
+			negate = false
+			needObj = false
+			if ae == nil {
+				ae = newExpr
+			} else {
+				ae.children = append(ae.children, newExpr)
+			}
+			vsout = parsedVs
+		default:
+			break loop
+		}
+	}
+	if !ps.isEmpty() || needObj || ae == nil || (ae.obj == nil && len(ae.children) == 0) {
+		err = errInvalidNumberOfArguments
+	}
 	return
 }

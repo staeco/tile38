@@ -4,9 +4,7 @@ import (
 	"time"
 )
 
-const (
-	localExpiresAfter = time.Second * 30
-)
+const localExpiresAfter = time.Second * 30
 
 // LocalPublisher is used to publish local notifcations
 type LocalPublisher interface {

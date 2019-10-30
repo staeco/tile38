@@ -8,6 +8,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/tidwall/redcon"
 	"github.com/tidwall/tile38/internal/log"
 )
 
@@ -160,9 +161,9 @@ func (server *Server) goLive(
 	var livemsg []byte
 	switch outputType {
 	case JSON:
-		livemsg = []byte(`{"ok":true,"live":true}`)
+		livemsg = redcon.AppendBulkString(nil, `{"ok":true,"live":true}`)
 	case RESP:
-		livemsg = []byte("+OK\r\n")
+		livemsg = redcon.AppendOK(nil)
 	}
 	if err := writeLiveMessage(conn, livemsg, false, connType, websocket); err != nil {
 		return nil // nil return is fine here

@@ -49,6 +49,14 @@
   version = "v1.17.14"
 
 [[projects]]
+  digest = "1:545ae40d6dde46043a71bdfd7f9a17f2353ce16277c83ac685af231b4b7c4beb"
+  name = "github.com/cespare/xxhash"
+  packages = ["."]
+  pruneopts = ""
+  revision = "de209a9ffae3256185a6bb135d1a0ada7b2b5f09"
+  version = "v2.1.0"
+
+[[projects]]
   digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -308,6 +316,14 @@
   revision = "b2b1a7ca20e34ad839fdb81f78e67522c99959f0"
 
 [[projects]]
+  digest = "1:2351ccd20a2fc2ba55096db53b98f6dc4451d2f68b72ab744dd1550adf98e85f"
+  name = "github.com/tidwall/rhh"
+  packages = ["."]
+  pruneopts = ""
+  revision = "86b588640216d02f9c15d34f1f3d546f082dd65e"
+  version = "v1.1.0"
+
+[[projects]]
   branch = "master"
   digest = "1:5d9d865e55b95f001e52a7f5d1f812e8a80f0f05d5b04ede006f24206ebba33c"
   name = "github.com/tidwall/rtree"
@@ -485,6 +501,7 @@
     "github.com/tidwall/redbench",
     "github.com/tidwall/redcon",
     "github.com/tidwall/resp",
+    "github.com/tidwall/rhh",
     "github.com/tidwall/sjson",
     "github.com/tidwall/tinybtree",
     "github.com/yuin/gopher-lua",

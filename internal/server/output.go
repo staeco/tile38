@@ -7,7 +7,7 @@ import (
 	"github.com/tidwall/resp"
 )
 
-func (c *Server) cmdOutput(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdOutput(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 	var arg string

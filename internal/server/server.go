@@ -28,6 +28,7 @@ import (
 	"github.com/tidwall/rbang"
 	"github.com/tidwall/redcon"
 	"github.com/tidwall/resp"
+	"github.com/tidwall/rhh"
 	"github.com/tidwall/tile38/core"
 	"github.com/tidwall/tile38/internal/collection"
 	"github.com/tidwall/tile38/internal/deadline"
@@ -93,18 +94,15 @@ type Server struct {
 	connsmu sync.RWMutex
 	conns   map[int]*Client
 
-	exlistmu sync.RWMutex
-	exlist   []exitem
-
 	mu       sync.RWMutex
-	aof      *os.File                        // active aof file
-	aofdirty int32                           // mark the aofbuf as having data
-	aofbuf   []byte                          // prewrite buffer
-	aofsz    int                             // active size of the aof file
-	qdb      *buntdb.DB                      // hook queue log
-	qidx     uint64                          // hook queue log last idx
-	cols     tinybtree.BTree                 // data collections
-	expires  map[string]map[string]time.Time // synced with cols
+	aof      *os.File        // active aof file
+	aofdirty int32           // mark the aofbuf as having data
+	aofbuf   []byte          // prewrite buffer
+	aofsz    int             // active size of the aof file
+	qdb      *buntdb.DB      // hook queue log
+	qidx     uint64          // hook queue log last idx
+	cols     tinybtree.BTree // data collections
+	expires  *rhh.Map        // map[string]map[string]time.Time
 
 	follows    map[*bytes.Buffer]bool
 	fcond      *sync.Cond
@@ -148,7 +146,7 @@ func Serve(host string, port int, dir string, http bool) error {
 		hooks:    make(map[string]*Hook),
 		hooksOut: make(map[string]*Hook),
 		aofconnM: make(map[net.Conn]bool),
-		expires:  make(map[string]map[string]time.Time),
+		expires:  rhh.New(0),
 		started:  time.Now(),
 		conns:    make(map[int]*Client),
 		http:     http,
@@ -259,7 +257,7 @@ func Serve(host string, port int, dir string, http bool) error {
 			server.aof.Sync()
 		}()
 	}
-	server.fillExpiresList()
+	// server.fillExpiresList()
 
 	// Start background routines
 	if server.config.followHost() != "" {
@@ -919,10 +917,7 @@ func randomKey(n int) string {
 func (server *Server) reset() {
 	server.aofsz = 0
 	server.cols = tinybtree.BTree{}
-	server.exlistmu.Lock()
-	server.exlist = nil
-	server.exlistmu.Unlock()
-	server.expires = make(map[string]map[string]time.Time)
+	server.expires = rhh.New(0)
 }
 
 func (server *Server) command(msg *Message, client *Client) (
@@ -932,7 +927,7 @@ func (server *Server) command(msg *Message, client *Client) (
 	default:
 		err = fmt.Errorf("unknown command '%s'", msg.Args[0])
 	case "set":
-		res, d, err = server.cmdSet(msg)
+		res, d, err = server.cmdSet(msg, true)
 	case "fset":
 		res, d, err = server.cmdFset(msg)
 	case "del":

@@ -31,7 +31,7 @@ const (
 
 type scanWriter struct {
 	mu             sync.Mutex
-	c              *Server
+	s              *Server
 	wr             *bytes.Buffer
 	msg            *Message
 	col            *collection.Collection
@@ -72,7 +72,7 @@ type ScanWriterParams struct {
 	skipTesting     bool
 }
 
-func (c *Server) newScanWriter(
+func (s *Server) newScanWriter(
 	wr *bytes.Buffer, msg *Message, key string, output outputT,
 	precision uint64, globPattern string, matchValues bool,
 	cursor, limit uint64, wheres []whereT, whereins []whereinT, whereevals []whereevalT, nofields bool,
@@ -92,7 +92,7 @@ func (c *Server) newScanWriter(
 		}
 	}
 	sw := &scanWriter{
-		c:           c,
+		s:           s,
 		wr:          wr,
 		msg:         msg,
 		cursor:      cursor,
@@ -113,7 +113,7 @@ func (c *Server) newScanWriter(
 			sw.globSingle = true
 		}
 	}
-	sw.col = c.getCol(key)
+	sw.col = s.getCol(key)
 	if sw.col != nil {
 		sw.fmap = sw.col.FieldMap()
 		sw.farr = sw.col.FieldArr()

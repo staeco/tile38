@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/tidwall/geojson"
+	"github.com/tidwall/rhh"
 	"github.com/tidwall/tile38/core"
 	"github.com/tidwall/tile38/internal/collection"
 	"github.com/tidwall/tile38/internal/log"
@@ -92,10 +93,13 @@ func (server *Server) aofshrink() {
 					if col == nil {
 						return
 					}
-					var fnames = col.FieldArr()       // reload an array of field names to match each object
-					var exm = server.expires[keys[0]] // the expiration map
-					var now = time.Now()              // used for expiration
-					var count = 0                     // the object count
+					var fnames = col.FieldArr() // reload an array of field names to match each object
+					var exm *rhh.Map            // the expiration map
+					if value, ok := server.expires.Get(keys[0]); ok {
+						exm = value.(*rhh.Map)
+					}
+					var now = time.Now() // used for expiration
+					var count = 0        // the object count
 					col.ScanGreaterOrEqual(nextid, false, nil, nil,
 						func(id string, obj geojson.Object, fields []float64) bool {
 							if count == maxids {
@@ -118,9 +122,8 @@ func (server *Server) aofshrink() {
 								}
 							}
 							if exm != nil {
-								at, ok := exm[id]
-								if ok {
-									expires := at.Sub(now)
+								if at, ok := exm.Get(id); ok {
+									expires := at.(time.Time).Sub(now)
 									if expires > 0 {
 										values = append(values, "ex")
 										values = append(values, strconv.FormatFloat(math.Floor(float64(expires)/float64(time.Second)*10)/10, 'f', -1, 64))

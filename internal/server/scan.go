@@ -10,15 +10,15 @@ import (
 	"github.com/tidwall/tile38/internal/glob"
 )
 
-func (c *Server) cmdScanArgs(vs []string) (
-	s liveFenceSwitches, err error,
+func (s *Server) cmdScanArgs(vs []string) (
+	ls liveFenceSwitches, err error,
 ) {
 	var t searchScanBaseTokens
-	vs, t, err = c.parseSearchScanBaseTokens("scan", t, vs)
+	vs, t, err = s.parseSearchScanBaseTokens("scan", t, vs)
 	if err != nil {
 		return
 	}
-	s.searchScanBaseTokens = t
+	ls.searchScanBaseTokens = t
 	if len(vs) != 0 {
 		err = errInvalidNumberOfArguments
 		return
@@ -26,13 +26,13 @@ func (c *Server) cmdScanArgs(vs []string) (
 	return
 }
 
-func (c *Server) cmdScan(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdScan(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 
-	s, err := c.cmdScanArgs(vs)
-	if s.usingLua() {
-		defer s.Close()
+	args, err := s.cmdScanArgs(vs)
+	if args.usingLua() {
+		defer args.Close()
 		defer func() {
 			if r := recover(); r != nil {
 				res = NOMessage
@@ -45,9 +45,10 @@ func (c *Server) cmdScan(msg *Message) (res resp.Value, err error) {
 		return NOMessage, err
 	}
 	wr := &bytes.Buffer{}
-	sw, err := c.newScanWriter(
-		wr, msg, s.key, s.output, s.precision, s.glob, false,
-		s.cursor, s.limit, s.wheres, s.whereins, s.whereevals, s.nofields)
+	sw, err := s.newScanWriter(
+		wr, msg, args.key, args.output, args.precision, args.glob, false,
+		args.cursor, args.limit, args.wheres, args.whereins, args.whereevals,
+		args.nofields)
 	if err != nil {
 		return NOMessage, err
 	}
@@ -58,15 +59,15 @@ func (c *Server) cmdScan(msg *Message) (res resp.Value, err error) {
 	if sw.col != nil {
 		if sw.output == outputCount && len(sw.wheres) == 0 &&
 			len(sw.whereins) == 0 && sw.globEverything == true {
-			count := sw.col.Count() - int(s.cursor)
+			count := sw.col.Count() - int(args.cursor)
 			if count < 0 {
 				count = 0
 			}
 			sw.count = uint64(count)
 		} else {
-			g := glob.Parse(sw.globPattern, s.desc)
+			g := glob.Parse(sw.globPattern, args.desc)
 			if g.Limits[0] == "" && g.Limits[1] == "" {
-				sw.col.Scan(s.desc, sw,
+				sw.col.Scan(args.desc, sw,
 					msg.Deadline,
 					func(id string, o geojson.Object, fields []float64) bool {
 						return sw.writeObject(ScanWriterParams{
@@ -77,7 +78,7 @@ func (c *Server) cmdScan(msg *Message) (res resp.Value, err error) {
 					},
 				)
 			} else {
-				sw.col.ScanRange(g.Limits[0], g.Limits[1], s.desc, sw,
+				sw.col.ScanRange(g.Limits[0], g.Limits[1], args.desc, sw,
 					msg.Deadline,
 					func(id string, o geojson.Object, fields []float64) bool {
 						return sw.writeObject(ScanWriterParams{
@@ -97,20 +98,3 @@ func (c *Server) cmdScan(msg *Message) (res resp.Value, err error) {
 	}
 	return sw.respOut, nil
 }
-
-// type tCursor struct {
-// 	offset func() uint64
-// 	iter   func(n uint64)
-// }
-
-// func (cursor *tCursor) Offset() uint64 {
-// 	return cursor.offset()
-// }
-
-// func (cursor *tCursor) Step(n uint64) {
-// 	cursor.iter(n)
-// }
-
-// func newCursor(offset func() uint64, iter func(n uint64)) *tCursor {
-// 	return &tCursor{offset, iter}
-// }

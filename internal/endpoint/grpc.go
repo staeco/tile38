@@ -11,9 +11,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const (
-	grpcExpiresAfter = time.Second * 30
-)
+const grpcExpiresAfter = time.Second * 30
 
 // GRPCConn is an endpoint connection
 type GRPCConn struct {

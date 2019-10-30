@@ -9,9 +9,7 @@ import (
 	"github.com/tidwall/tile38/internal/log"
 )
 
-const (
-	disqueExpiresAfter = time.Second * 30
-)
+const disqueExpiresAfter = time.Second * 30
 
 // DisqueConn is an endpoint connection
 type DisqueConn struct {

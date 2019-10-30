@@ -19,7 +19,7 @@ func randMassInsertPosition(minLat, minLon, maxLat, maxLon float64) (float64, fl
 	return lat, lon
 }
 
-func (c *Server) cmdMassInsert(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdMassInsert(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 
@@ -76,17 +76,17 @@ func (c *Server) cmdMassInsert(msg *Message) (res resp.Value, err error) {
 	}
 
 	docmd := func(args []string) error {
-		c.mu.Lock()
-		defer c.mu.Unlock()
+		s.mu.Lock()
+		defer s.mu.Unlock()
 		var nmsg Message
 		nmsg = *msg
 		nmsg._command = ""
 		nmsg.Args = args
-		_, d, err := c.command(&nmsg, nil)
+		_, d, err := s.command(&nmsg, nil)
 		if err != nil {
 			return err
 		}
-		return c.writeAOF(nmsg.Args, &d)
+		return s.writeAOF(nmsg.Args, &d)
 
 	}
 	rand.Seed(time.Now().UnixNano())
@@ -146,7 +146,7 @@ func (c *Server) cmdMassInsert(msg *Message) (res resp.Value, err error) {
 	return OKMessage(msg, start), nil
 }
 
-func (c *Server) cmdSleep(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdSleep(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	if len(msg.Args) != 2 {
 		return NOMessage, errInvalidNumberOfArguments

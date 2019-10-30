@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -16,7 +18,6 @@ import (
 	"github.com/peterh/liner"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/resp"
-	"github.com/tidwall/tile38/cmd/tile38-cli/internal/client"
 	"github.com/tidwall/tile38/core"
 )
 
@@ -64,6 +65,7 @@ func showHelp() bool {
 	fmt.Fprintf(os.Stdout, " --noprompt         Do not display a prompt\n")
 	fmt.Fprintf(os.Stdout, " --tty              Force TTY\n")
 	fmt.Fprintf(os.Stdout, " --resp             Use RESP output formatting (default is JSON output)\n")
+	fmt.Fprintf(os.Stdout, " --json             Use JSON output formatting (default is JSON output)\n")
 	fmt.Fprintf(os.Stdout, " -h <hostname>      Server hostname (default: %s)\n", hostname)
 	fmt.Fprintf(os.Stdout, " -p <port>          Server port (default: %d)\n", port)
 	fmt.Fprintf(os.Stdout, "\n")
@@ -113,6 +115,8 @@ func parseArgs() bool {
 			noprompt = true
 		case "--resp":
 			output = "resp"
+		case "--json":
+			output = "json"
 		case "-h":
 			hostname = readArg(arg)
 		case "-p":
@@ -156,10 +160,10 @@ func main() {
 	}
 
 	addr := fmt.Sprintf("%s:%d", hostname, port)
-	var conn *client.Conn
+	var conn *client
 	connDial := func() {
 		var err error
-		conn, err = client.Dial(addr)
+		conn, err = clientDial("tcp", addr)
 		if err != nil {
 			if _, ok := err.(net.Error); ok {
 				fmt.Fprintln(os.Stderr, refusedErrorString(addr))
@@ -167,15 +171,9 @@ func main() {
 				fmt.Fprintln(os.Stderr, err.Error())
 				os.Exit(1)
 			}
-		}
-		if conn != nil {
-			if output == "resp" {
-				_, err := conn.Do("output resp")
-				if err != nil {
-					fmt.Fprintln(os.Stderr, err.Error())
-					os.Exit(1)
-				}
-			}
+		} else if _, err := conn.Do("output " + output); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
 		}
 	}
 	connDial()
@@ -190,9 +188,16 @@ func main() {
 			} else {
 				var msg []byte
 				for {
-					msg, err = conn.ReadMessage()
+					msg, err = conn.readLiveResp()
 					if err != nil {
 						break
+					}
+					if !raw {
+						if output == "resp" {
+							msg = convert2termresp(msg)
+						} else {
+							msg = convert2termjson(msg)
+						}
 					}
 					fmt.Fprintln(os.Stderr, string(msg))
 				}
@@ -343,36 +348,40 @@ func main() {
 						output = "json"
 					}
 				}
+				if output == "resp" &&
+					(strings.HasPrefix(string(msg), "*3\r\n$10\r\npsubscribe\r\n") ||
+						strings.HasPrefix(string(msg), "*3\r\n$9\r\nsubscribe\r\n")) {
+					livemode = true
+				}
+				if !raw {
+					if output == "resp" {
+						msg = convert2termresp(msg)
+					} else {
+						msg = convert2termjson(msg)
+					}
+				}
+
+				if !livemode && output == "json" {
+					if gjson.GetBytes(msg, "command").String() == "psubscribe" ||
+						gjson.GetBytes(msg, "command").String() == "subscribe" ||
+						string(msg) == liveJSON {
+						livemode = true
+					}
+				}
 
 				mustOutput := true
-
-				if oneCommand == "" && !jsonOK(msg) {
+				if oneCommand == "" && output == "json" && !jsonOK(msg) {
 					var cerr connError
 					if err := json.Unmarshal(msg, &cerr); err == nil {
 						fmt.Fprintln(os.Stderr, "(error) "+cerr.Err)
 						mustOutput = false
 					}
-				} else if gjson.GetBytes(msg, "command").String() == "psubscribe" ||
-					gjson.GetBytes(msg, "command").String() == "subscribe" ||
-					string(msg) == client.LiveJSON {
+				} else if livemode {
 					fmt.Fprintln(os.Stderr, string(msg))
-					livemode = true
 					break // break out of prompt and just feed data to screen
 				}
 				if mustOutput {
-					if output == "resp" {
-						if !raw {
-							msg = convert2termresp(msg)
-						}
-						fmt.Fprintln(os.Stdout, string(msg))
-					} else {
-						msg = bytes.TrimSpace(msg)
-						if raw {
-							fmt.Fprintln(os.Stdout, string(msg))
-						} else {
-							fmt.Fprintln(os.Stdout, string(msg))
-						}
-					}
+					fmt.Fprintln(os.Stdout, string(msg))
 				}
 			}
 		} else if err == liner.ErrPromptAborted {
@@ -399,6 +408,13 @@ func convert2termresp(msg []byte) []byte {
 		out += convert2termrespval(v, 0)
 	}
 	return []byte(strings.TrimSpace(out))
+}
+
+func convert2termjson(msg []byte) []byte {
+	if msg[0] == '{' {
+		return msg
+	}
+	return bytes.TrimSpace(msg[bytes.IndexByte(msg, '\n')+1:])
 }
 
 func convert2termrespval(v resp.Value, spaces int) string {
@@ -494,4 +510,109 @@ func help(arg string) error {
 		}
 	}
 	return nil
+}
+
+const liveJSON = `{"ok":true,"live":true}`
+
+type client struct {
+	wr io.Writer
+	rd *bufio.Reader
+}
+
+func clientDial(network, addr string) (*client, error) {
+	conn, err := net.Dial(network, addr)
+	if err != nil {
+		return nil, err
+	}
+	return &client{wr: conn, rd: bufio.NewReader(conn)}, nil
+}
+
+func (c *client) Do(command string) ([]byte, error) {
+	_, err := c.wr.Write([]byte(command + "\r\n"))
+	if err != nil {
+		return nil, err
+	}
+	return c.readResp()
+}
+
+func (c *client) readResp() ([]byte, error) {
+	ch, err := c.rd.Peek(1)
+	if err != nil {
+		return nil, err
+	}
+	switch ch[0] {
+	case ':', '+', '-', '{':
+		return c.readLine()
+	case '$':
+		return c.readBulk()
+	case '*':
+		return c.readArray()
+	default:
+		return nil, fmt.Errorf("invalid response character '%c", ch[0])
+	}
+}
+
+func (c *client) readArray() ([]byte, error) {
+	out, err := c.readLine()
+	if err != nil {
+		return nil, err
+	}
+	n, err := strconv.ParseUint(string(bytes.TrimSpace(out[1:])), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < int(n); i++ {
+		resp, err := c.readResp()
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, resp...)
+	}
+	return out, nil
+}
+
+func (c *client) readBulk() ([]byte, error) {
+	line, err := c.readLine()
+	if err != nil {
+		return nil, err
+	}
+	x, err := strconv.ParseInt(string(bytes.TrimSpace(line[1:])), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	if x < 0 {
+		return line, nil
+	}
+	out := make([]byte, len(line)+int(x)+2)
+	if _, err := io.ReadFull(c.rd, out[len(line):]); err != nil {
+		return nil, err
+	}
+	if !bytes.HasSuffix(out, []byte{'\r', '\n'}) {
+		return nil, errors.New("invalid response")
+	}
+	copy(out, line)
+	return out, nil
+}
+
+func (c *client) readLine() ([]byte, error) {
+	line, err := c.rd.ReadBytes('\r')
+	if err != nil {
+		return nil, err
+	}
+	ch, err := c.rd.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	if ch != '\n' {
+		return nil, errors.New("invalid response")
+	}
+	return append(line, '\n'), nil
+}
+
+func (c *client) Reader() io.Reader {
+	return c.rd
+}
+
+func (c *client) readLiveResp() (message []byte, err error) {
+	return c.readResp()
 }

@@ -3,16 +3,14 @@ package endpoint
 import (
 	"errors"
 	"fmt"
-	"github.com/tidwall/gjson"
 	"sync"
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/tidwall/gjson"
 )
 
-const (
-	kafkaExpiresAfter = time.Second * 30
-)
+const kafkaExpiresAfter = time.Second * 30
 
 // KafkaConn is an endpoint connection
 type KafkaConn struct {

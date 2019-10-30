@@ -40,6 +40,83 @@ func jsonString(s string) string {
 	b[len(b)-1] = '"'
 	return string(b)
 }
+
+func isJSONNumber(data string) bool {
+	// Returns true if the given string can be encoded as a JSON number value.
+	// See:
+	// https://json.org
+	// http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf
+	if data == "" {
+		return false
+	}
+	i := 0
+	// sign
+	if data[i] == '-' {
+		i++
+	}
+	if i == len(data) {
+		return false
+	}
+	// int
+	if data[i] == '0' {
+		i++
+	} else {
+		for ; i < len(data); i++ {
+			if data[i] >= '0' && data[i] <= '9' {
+				continue
+			}
+			break
+		}
+	}
+	// frac
+	if i == len(data) {
+		return true
+	}
+	if data[i] == '.' {
+		i++
+		if i == len(data) {
+			return false
+		}
+		if data[i] < '0' || data[i] > '9' {
+			return false
+		}
+		i++
+		for ; i < len(data); i++ {
+			if data[i] >= '0' && data[i] <= '9' {
+				continue
+			}
+			break
+		}
+	}
+	// exp
+	if i == len(data) {
+		return true
+	}
+	if data[i] == 'e' || data[i] == 'E' {
+		i++
+		if i == len(data) {
+			return false
+		}
+		if data[i] == '+' || data[i] == '-' {
+			i++
+		}
+		if i == len(data) {
+			return false
+		}
+		if data[i] < '0' || data[i] > '9' {
+			return false
+		}
+		i++
+		for ; i < len(data); i++ {
+			if data[i] >= '0' && data[i] <= '9' {
+				continue
+			}
+			break
+		}
+	}
+	return i == len(data)
+}
+
 func appendJSONSimpleBounds(dst []byte, o geojson.Object) []byte {
 	bbox := o.Rect()
 	dst = append(dst, `{"sw":{"lat":`...)
@@ -85,7 +162,7 @@ func jsonTimeFormat(t time.Time) string {
 	return string(b)
 }
 
-func (c *Server) cmdJget(msg *Message) (resp.Value, error) {
+func (s *Server) cmdJget(msg *Message) (resp.Value, error) {
 	start := time.Now()
 
 	if len(msg.Args) < 3 {
@@ -110,7 +187,7 @@ func (c *Server) cmdJget(msg *Message) (resp.Value, error) {
 			}
 		}
 	}
-	col := c.getCol(key)
+	col := s.getCol(key)
 	if col == nil {
 		if msg.OutputType == RESP {
 			return resp.NullValue(), nil
@@ -156,7 +233,7 @@ func (c *Server) cmdJget(msg *Message) (resp.Value, error) {
 	return NOMessage, nil
 }
 
-func (c *Server) cmdJset(msg *Message) (res resp.Value, d commandDetails, err error) {
+func (s *Server) cmdJset(msg *Message) (res resp.Value, d commandDetails, err error) {
 	// JSET key path value [RAW]
 	start := time.Now()
 
@@ -183,18 +260,12 @@ func (c *Server) cmdJset(msg *Message) (res resp.Value, d commandDetails, err er
 	if !str && !raw {
 		switch val {
 		default:
-			if len(val) > 0 {
-				if (val[0] >= '0' && val[0] <= '9') || val[0] == '-' {
-					if _, err := strconv.ParseFloat(val, 64); err == nil {
-						raw = true
-					}
-				}
-			}
+			raw = isJSONNumber(val)
 		case "true", "false", "null":
 			raw = true
 		}
 	}
-	col := c.getCol(key)
+	col := s.getCol(key)
 	var createcol bool
 	if col == nil {
 		col = collection.New()
@@ -222,10 +293,10 @@ func (c *Server) cmdJset(msg *Message) (res resp.Value, d commandDetails, err er
 		nmsg := *msg
 		nmsg.Args = []string{"SET", key, id, "OBJECT", json}
 		// SET key id OBJECT json
-		return c.cmdSet(&nmsg)
+		return s.cmdSet(&nmsg, false)
 	}
 	if createcol {
-		c.setCol(key, col)
+		s.setCol(key, col)
 	}
 
 	d.key = key
@@ -234,7 +305,7 @@ func (c *Server) cmdJset(msg *Message) (res resp.Value, d commandDetails, err er
 	d.timestamp = time.Now()
 	d.updated = true
 
-	c.clearIDExpires(key, id)
+	s.clearIDExpires(key, id)
 	col.Set(d.id, d.obj, nil, nil)
 	switch msg.OutputType {
 	case JSON:
@@ -248,7 +319,7 @@ func (c *Server) cmdJset(msg *Message) (res resp.Value, d commandDetails, err er
 	return NOMessage, d, nil
 }
 
-func (c *Server) cmdJdel(msg *Message) (res resp.Value, d commandDetails, err error) {
+func (s *Server) cmdJdel(msg *Message) (res resp.Value, d commandDetails, err error) {
 	start := time.Now()
 
 	if len(msg.Args) != 4 {
@@ -258,7 +329,7 @@ func (c *Server) cmdJdel(msg *Message) (res resp.Value, d commandDetails, err er
 	id := msg.Args[2]
 	path := msg.Args[3]
 
-	col := c.getCol(key)
+	col := s.getCol(key)
 	if col == nil {
 		if msg.OutputType == RESP {
 			return resp.IntegerValue(0), d, nil
@@ -291,7 +362,7 @@ func (c *Server) cmdJdel(msg *Message) (res resp.Value, d commandDetails, err er
 		nmsg := *msg
 		nmsg.Args = []string{"SET", key, id, "OBJECT", json}
 		// SET key id OBJECT json
-		return c.cmdSet(&nmsg)
+		return s.cmdSet(&nmsg, false)
 	}
 
 	d.key = key
@@ -300,7 +371,7 @@ func (c *Server) cmdJdel(msg *Message) (res resp.Value, d commandDetails, err er
 	d.timestamp = time.Now()
 	d.updated = true
 
-	c.clearIDExpires(d.key, d.id)
+	s.clearIDExpires(d.key, d.id)
 	col.Set(d.id, d.obj, nil, nil)
 	switch msg.OutputType {
 	case JSON:

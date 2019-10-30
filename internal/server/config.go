@@ -326,7 +326,7 @@ func (config *Config) getProperty(name string) string {
 	}
 }
 
-func (c *Server) cmdConfigGet(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdConfigGet(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 	var ok bool
@@ -338,7 +338,7 @@ func (c *Server) cmdConfigGet(msg *Message) (res resp.Value, err error) {
 	if len(vs) != 0 {
 		return NOMessage, errInvalidNumberOfArguments
 	}
-	m := c.config.getProperties(name)
+	m := s.config.getProperties(name)
 	switch msg.OutputType {
 	case JSON:
 		data, err := json.Marshal(m)
@@ -352,7 +352,7 @@ func (c *Server) cmdConfigGet(msg *Message) (res resp.Value, err error) {
 	}
 	return
 }
-func (c *Server) cmdConfigSet(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdConfigSet(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 	var ok bool
@@ -370,19 +370,19 @@ func (c *Server) cmdConfigSet(msg *Message) (res resp.Value, err error) {
 	if len(vs) != 0 {
 		return NOMessage, errInvalidNumberOfArguments
 	}
-	if err := c.config.setProperty(name, value, false); err != nil {
+	if err := s.config.setProperty(name, value, false); err != nil {
 		return NOMessage, err
 	}
 	return OKMessage(msg, start), nil
 }
-func (c *Server) cmdConfigRewrite(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdConfigRewrite(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 
 	if len(vs) != 0 {
 		return NOMessage, errInvalidNumberOfArguments
 	}
-	c.config.write(true)
+	s.config.write(true)
 	return OKMessage(msg, start), nil
 }
 

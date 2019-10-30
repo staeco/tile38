@@ -2,6 +2,7 @@ package glob
 
 import "strings"
 
+// Glob structure for simple string matching
 type Glob struct {
 	Pattern string
 	Desc    bool
@@ -9,10 +10,13 @@ type Glob struct {
 	IsGlob  bool
 }
 
-func Match(pattern, name string) (matched bool, err error) {
-	return wildcardMatch(pattern, name)
+// Match returns true when string matches pattern. Returns an error when the
+// pattern is invalid.
+func Match(pattern, str string) (matched bool, err error) {
+	return wildcardMatch(pattern, str)
 }
 
+// IsGlob returns true when the pattern is a valid glob
 func IsGlob(pattern string) bool {
 	for i := 0; i < len(pattern); i++ {
 		switch pattern[i] {
@@ -24,6 +28,7 @@ func IsGlob(pattern string) bool {
 	return false
 }
 
+// Parse returns a glob structure from the pattern.
 func Parse(pattern string, desc bool) *Glob {
 	g := &Glob{Pattern: pattern, Desc: desc, Limits: []string{"", ""}}
 	if strings.HasPrefix(pattern, "*") {

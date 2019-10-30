@@ -2,34 +2,38 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.17.6] - 2019-08-22
+## [1.18.0] = 2019-10-09
+### Enhancement
+- 639f6e2: Updated the spatial index (R-tree) implementation.
 
+### Fixes
+- b092cea: Fixed MQTT blocking on publish/wait.
+- #496: Fixed MQTT client ID uniqueness. (@neterror)
+- #497: Fixed data race on webhook map with TTLs. (@belek)
+- #498: Fixed JSET cancels objects TTL expiry value. (@belek)
+
+## [1.17.6] - 2019-08-22
 ### Fixes
 - 3d96b17: Fixed periodic stop-the-world pauses for systems with large heaps.
 
 ## [1.17.5] - 2019-08-22
-
 ### Fixes
 - #489: Fixed nearby count always one (@jkarjala)
 
 ## [1.17.4] - 2019-08-09
-
 ### Fixes
 - #486: Fixed data condition on connections map (@saltatory)
 
 ## [1.17.3] - 2019-08-03
-
 ### Fixes
 - #483: Fixed lua pool pruning (@rshura)
 - f7888c1: Fixed malformed json for chans command
 
 ## [1.17.2] - 2019-06-28
-
 ### Fixes
 - #422: Fixes NEARBY command distance normalization issue (@TrivikrAm-Pamarthi, @melbania)
 
 ## [1.17.1] - 2019-05-04
-
 ### Fixes
 - #448: Fixed missing commands for unsubscribing from active channel (@githubfr)
 - #454: Fixed colored output for fatalf (@olevole)

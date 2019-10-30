@@ -22,5 +22,4 @@ func BenchmarkLogPrintf(t *testing.B) {
 	for i := 0; i < t.N; i++ {
 		Printf("X %s", "Y")
 	}
-
 }

@@ -8,9 +8,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-const (
-	redisExpiresAfter = time.Second * 30
-)
+const redisExpiresAfter = time.Second * 30
 
 // RedisConn is an endpoint connection
 type RedisConn struct {

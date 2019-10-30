@@ -102,7 +102,7 @@ func fenceMatch(
 		if fence.roam.on {
 			if details.command == "set" {
 				roamNearbys, roamFaraways =
-					fenceMatchRoam(sw.c, fence, details.key,
+					fenceMatchRoam(sw.s, fence, details.key,
 						details.id, details.obj)
 			}
 			if len(roamNearbys) == 0 && len(roamFaraways) == 0 {
@@ -272,7 +272,7 @@ func extendRoamMessage(
 		math.Floor(match.meters*1000)/1000, 'f', -1, 64)
 	if fence.roam.scan != "" {
 		nmsg = append(nmsg, `,"scan":[`...)
-		col := sw.c.getCol(fence.roam.key)
+		col := sw.s.getCol(fence.roam.key)
 		if col != nil {
 			obj, _, ok := col.Get(match.id)
 			if ok {
@@ -354,10 +354,10 @@ func fenceMatchObject(fence *liveFenceSwitches, obj geojson.Object) bool {
 }
 
 func fenceMatchRoam(
-	c *Server, fence *liveFenceSwitches,
+	s *Server, fence *liveFenceSwitches,
 	tkey, tid string, obj geojson.Object,
 ) (nearbys, faraways []roamMatch) {
-	col := c.getCol(fence.roam.key)
+	col := s.getCol(fence.roam.key)
 	if col == nil {
 		return
 	}
@@ -373,7 +373,7 @@ func fenceMatchRoam(
 	col.Intersects(geojson.NewRect(rect), 0, nil, nil, func(
 		id string, obj2 geojson.Object, fields []float64,
 	) bool {
-		if c.hasExpired(fence.roam.key, id) {
+		if s.hasExpired(fence.roam.key, id) {
 			return true
 		}
 		var idMatch bool
@@ -410,7 +410,7 @@ func fenceMatchRoam(
 	})
 	for id := range prevNearbys {
 		obj2, _, ok := col.Get(id)
-		if ok && !c.hasExpired(fence.roam.key, id) {
+		if ok && !s.hasExpired(fence.roam.key, id) {
 			faraways = append(faraways, roamMatch{
 				id:     id,
 				obj:    obj2,

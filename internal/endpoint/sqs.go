@@ -17,9 +17,7 @@ import (
 
 var errCreateQueue = errors.New("Error while creating queue")
 
-const (
-	sqsExpiresAfter = time.Second * 30
-)
+const sqsExpiresAfter = time.Second * 30
 
 // SQSConn is an endpoint connection
 type SQSConn struct {

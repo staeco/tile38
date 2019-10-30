@@ -8,9 +8,7 @@ import (
 	"github.com/nats-io/go-nats"
 )
 
-const (
-	natsExpiresAfter = time.Second * 30
-)
+const natsExpiresAfter = time.Second * 30
 
 // NATSConn is an endpoint connection
 type NATSConn struct {

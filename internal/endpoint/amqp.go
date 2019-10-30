@@ -9,9 +9,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-const (
-	amqpExpiresAfter = time.Second * 30
-)
+const amqpExpiresAfter = time.Second * 30
 
 // AMQPConn is an endpoint connection
 type AMQPConn struct {

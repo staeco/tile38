@@ -1,158 +1,123 @@
 package server
 
 import (
-	"log"
 	"math/rand"
 	"time"
 
-	"github.com/tidwall/btree"
+	"github.com/tidwall/rhh"
+	"github.com/tidwall/tile38/internal/log"
 )
 
-type exitem struct {
-	key, id string
-	at      time.Time
-}
-
-func (a *exitem) Less(v btree.Item, ctx interface{}) bool {
-	b := v.(*exitem)
-	if a.at.Before(b.at) {
-		return true
-	}
-	if a.at.After(b.at) {
-		return false
-	}
-	if a.key < b.key {
-		return true
-	}
-	if a.key > b.key {
-		return false
-	}
-	return a.id < b.id
-}
-
-// fillExpiresList occurs once at startup
-func (c *Server) fillExpiresList() {
-	c.exlistmu.Lock()
-	c.exlist = c.exlist[:0]
-	for key, m := range c.expires {
-		for id, at := range m {
-			c.exlist = append(c.exlist, exitem{key, id, at})
+// clearIDExpires clears a single item from the expires list.
+func (s *Server) clearIDExpires(key, id string) (cleared bool) {
+	if s.expires.Len() > 0 {
+		if idm, ok := s.expires.Get(key); ok {
+			if _, ok := idm.(*rhh.Map).Delete(id); ok {
+				if idm.(*rhh.Map).Len() == 0 {
+					s.expires.Delete(key)
+				}
+				return true
+			}
 		}
 	}
-	c.exlistmu.Unlock()
-}
-
-// clearIDExpires clears a single item from the expires list.
-func (c *Server) clearIDExpires(key, id string) (cleared bool) {
-	if len(c.expires) == 0 {
-		return false
-	}
-	m, ok := c.expires[key]
-	if !ok {
-		return false
-	}
-	_, ok = m[id]
-	if !ok {
-		return false
-	}
-	delete(m, id)
-	return true
+	return false
 }
 
 // clearKeyExpires clears all items that are marked as expires from a single key.
-func (c *Server) clearKeyExpires(key string) {
-	delete(c.expires, key)
+func (s *Server) clearKeyExpires(key string) {
+	s.expires.Delete(key)
 }
 
 // moveKeyExpires moves all items that are marked as expires from a key to a newKey.
-func (c *Server) moveKeyExpires(key, newKey string) {
-	val := c.expires[key]
-	delete(c.expires, key)
-	c.expires[newKey] = val
+func (s *Server) moveKeyExpires(key, newKey string) {
+	if idm, ok := s.expires.Delete(key); ok {
+		s.expires.Set(newKey, idm)
+	}
 }
 
 // expireAt marks an item as expires at a specific time.
-func (c *Server) expireAt(key, id string, at time.Time) {
-	m := c.expires[key]
-	if m == nil {
-		m = make(map[string]time.Time)
-		c.expires[key] = m
+func (s *Server) expireAt(key, id string, at time.Time) {
+	idm, ok := s.expires.Get(key)
+	if !ok {
+		idm = rhh.New(0)
+		s.expires.Set(key, idm)
 	}
-	m[id] = at
-	c.exlistmu.Lock()
-	c.exlist = append(c.exlist, exitem{key, id, at})
-	c.exlistmu.Unlock()
+	idm.(*rhh.Map).Set(id, at.UnixNano())
 }
 
 // getExpires returns the when an item expires.
-func (c *Server) getExpires(key, id string) (at time.Time, ok bool) {
-	if len(c.expires) == 0 {
-		return at, false
+func (s *Server) getExpires(key, id string) (at time.Time, ok bool) {
+	if s.expires.Len() > 0 {
+		if idm, ok := s.expires.Get(key); ok {
+			if atv, ok := idm.(*rhh.Map).Get(id); ok {
+				return time.Unix(0, atv.(int64)), true
+			}
+		}
 	}
-	m, ok := c.expires[key]
-	if !ok {
-		return at, false
-	}
-	at, ok = m[id]
-	return at, ok
+	return time.Time{}, false
 }
 
 // hasExpired returns true if an item has expired.
-func (c *Server) hasExpired(key, id string) bool {
-	at, ok := c.getExpires(key, id)
-	if !ok {
-		return false
+func (s *Server) hasExpired(key, id string) bool {
+	if at, ok := s.getExpires(key, id); ok {
+		return time.Now().After(at)
 	}
-	return time.Now().After(at)
+	return false
+}
+
+const bgExpireDelay = time.Second / 10
+const bgExpireSegmentSize = 20
+
+// expirePurgeSweep is ran from backgroundExpiring operation and performs
+// segmented sweep of the expires list
+func (s *Server) expirePurgeSweep(rng *rand.Rand) (purged int) {
+	now := time.Now().UnixNano()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.expires.Len() == 0 {
+		return 0
+	}
+	for i := 0; i < bgExpireSegmentSize; i++ {
+		if key, idm, ok := s.expires.GetPos(rng.Uint64()); ok {
+			id, atv, ok := idm.(*rhh.Map).GetPos(rng.Uint64())
+			if ok {
+				if now > atv.(int64) {
+					// expired, purge from database
+					msg := &Message{}
+					msg.Args = []string{"del", key, id}
+					_, d, err := s.cmdDel(msg)
+					if err != nil {
+						log.Fatal(err)
+					}
+					if err := s.writeAOF(msg.Args, &d); err != nil {
+						log.Fatal(err)
+					}
+					purged++
+				}
+			}
+		}
+		// recycle the lock
+		s.mu.Unlock()
+		s.mu.Lock()
+	}
+	return purged
 }
 
 // backgroundExpiring watches for when items that have expired must be purged
 // from the database. It's executes 10 times a seconds.
-func (c *Server) backgroundExpiring() {
-	rand.Seed(time.Now().UnixNano())
-	var purgelist []exitem
+func (s *Server) backgroundExpiring() {
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	for {
-		if c.stopServer.on() {
+		if s.stopServer.on() {
 			return
 		}
-		now := time.Now()
-		purgelist = purgelist[:0]
-		c.exlistmu.Lock()
-		for i := 0; i < 20 && len(c.exlist) > 0; i++ {
-			ix := rand.Int() % len(c.exlist)
-			if now.After(c.exlist[ix].at) {
-				// purge from exlist
-				purgelist = append(purgelist, c.exlist[ix])
-				c.exlist[ix] = c.exlist[len(c.exlist)-1]
-				c.exlist = c.exlist[:len(c.exlist)-1]
-			}
+		purged := s.expirePurgeSweep(rng)
+		if purged > bgExpireSegmentSize/4 {
+			// do another purge immediately
+			continue
+		} else {
+			// back off
+			time.Sleep(bgExpireDelay)
 		}
-		c.exlistmu.Unlock()
-		if len(purgelist) > 0 {
-			c.mu.Lock()
-			for _, item := range purgelist {
-				if c.hasExpired(item.key, item.id) {
-					// purge from database
-					msg := &Message{}
-					msg.Args = []string{"del", item.key, item.id}
-					_, d, err := c.cmdDel(msg)
-					if err != nil {
-						c.mu.Unlock()
-						log.Fatal(err)
-						continue
-					}
-					if err := c.writeAOF(msg.Args, &d); err != nil {
-						c.mu.Unlock()
-						log.Fatal(err)
-						continue
-					}
-				}
-			}
-			c.mu.Unlock()
-			if len(purgelist) > 5 {
-				continue
-			}
-		}
-		time.Sleep(time.Second / 10)
 	}
 }

@@ -31,8 +31,8 @@ func (err errAOFHook) Error() string {
 
 var errInvalidAOF = errors.New("invalid aof file")
 
-func (server *Server) loadAOF() error {
-	fi, err := server.aof.Stat()
+func (s *Server) loadAOF() error {
+	fi, err := s.aof.Stat()
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (server *Server) loadAOF() error {
 	var args [][]byte
 	var packet [0xFFFF]byte
 	for {
-		n, err := server.aof.Read(packet[:])
+		n, err := s.aof.Read(packet[:])
 		if err != nil {
 			if err == io.EOF {
 				if len(buf) > 0 {
@@ -68,7 +68,7 @@ func (server *Server) loadAOF() error {
 			}
 			return err
 		}
-		server.aofsz += n
+		s.aofsz += n
 		data := packet[:n]
 		if len(buf) > 0 {
 			data = append(buf, data...)
@@ -88,7 +88,7 @@ func (server *Server) loadAOF() error {
 				for _, arg := range args {
 					msg.Args = append(msg.Args, string(arg))
 				}
-				if _, _, err := server.command(&msg, nil); err != nil {
+				if _, _, err := s.command(&msg, nil); err != nil {
 					if commandErrIsFatal(err) {
 						return err
 					}
@@ -117,96 +117,96 @@ func commandErrIsFatal(err error) bool {
 
 // flushAOF flushes all aof buffer data to disk. Set sync to true to sync the
 // fsync the file.
-func (server *Server) flushAOF(sync bool) {
-	if len(server.aofbuf) > 0 {
-		_, err := server.aof.Write(server.aofbuf)
+func (s *Server) flushAOF(sync bool) {
+	if len(s.aofbuf) > 0 {
+		_, err := s.aof.Write(s.aofbuf)
 		if err != nil {
 			panic(err)
 		}
 		if sync {
-			if err := server.aof.Sync(); err != nil {
+			if err := s.aof.Sync(); err != nil {
 				panic(err)
 			}
 		}
-		if cap(server.aofbuf) > 1024*1024*32 {
-			server.aofbuf = make([]byte, 0, 1024*1024*32)
+		if cap(s.aofbuf) > 1024*1024*32 {
+			s.aofbuf = make([]byte, 0, 1024*1024*32)
 		} else {
-			server.aofbuf = server.aofbuf[:0]
+			s.aofbuf = s.aofbuf[:0]
 		}
 	}
 }
 
-func (server *Server) writeAOF(args []string, d *commandDetails) error {
+func (s *Server) writeAOF(args []string, d *commandDetails) error {
 	if d != nil && !d.updated {
 		// just ignore writes if the command did not update
 		return nil
 	}
 
-	if server.shrinking {
+	if s.shrinking {
 		nargs := make([]string, len(args))
 		copy(nargs, args)
-		server.shrinklog = append(server.shrinklog, nargs)
+		s.shrinklog = append(s.shrinklog, nargs)
 	}
 
-	if server.aof != nil {
-		atomic.StoreInt32(&server.aofdirty, 1) // prewrite optimization flag
-		n := len(server.aofbuf)
-		server.aofbuf = redcon.AppendArray(server.aofbuf, len(args))
+	if s.aof != nil {
+		atomic.StoreInt32(&s.aofdirty, 1) // prewrite optimization flag
+		n := len(s.aofbuf)
+		s.aofbuf = redcon.AppendArray(s.aofbuf, len(args))
 		for _, arg := range args {
-			server.aofbuf = redcon.AppendBulkString(server.aofbuf, arg)
+			s.aofbuf = redcon.AppendBulkString(s.aofbuf, arg)
 		}
-		server.aofsz += len(server.aofbuf) - n
+		s.aofsz += len(s.aofbuf) - n
 	}
 
 	// notify aof live connections that we have new data
-	server.fcond.L.Lock()
-	server.fcond.Broadcast()
-	server.fcond.L.Unlock()
+	s.fcond.L.Lock()
+	s.fcond.Broadcast()
+	s.fcond.L.Unlock()
 
 	// process geofences
 	if d != nil {
 		// webhook geofences
-		if server.config.followHost() == "" {
+		if s.config.followHost() == "" {
 			// for leader only
 			if d.parent {
 				// queue children
 				for _, d := range d.children {
-					if err := server.queueHooks(d); err != nil {
+					if err := s.queueHooks(d); err != nil {
 						return err
 					}
 				}
 			} else {
 				// queue parent
-				if err := server.queueHooks(d); err != nil {
+				if err := s.queueHooks(d); err != nil {
 					return err
 				}
 			}
 		}
 
 		// live geofences
-		server.lcond.L.Lock()
-		if len(server.lives) > 0 {
+		s.lcond.L.Lock()
+		if len(s.lives) > 0 {
 			if d.parent {
 				// queue children
 				for _, d := range d.children {
-					server.lstack = append(server.lstack, d)
+					s.lstack = append(s.lstack, d)
 				}
 			} else {
 				// queue parent
-				server.lstack = append(server.lstack, d)
+				s.lstack = append(s.lstack, d)
 			}
-			server.lcond.Broadcast()
+			s.lcond.Broadcast()
 		}
-		server.lcond.L.Unlock()
+		s.lcond.L.Unlock()
 	}
 	return nil
 }
 
-func (server *Server) getQueueCandidates(d *commandDetails) []*Hook {
+func (s *Server) getQueueCandidates(d *commandDetails) []*Hook {
 	var candidates []*Hook
 	// add the hooks with "outside" detection
-	if len(server.hooksOut) > 0 {
-		for _, hook := range server.hooksOut {
+	if len(s.hooksOut) > 0 {
+		for _, hook := range s.hooksOut {
 			if hook.Key == d.key {
 				candidates = append(candidates, hook)
 			}
@@ -218,7 +218,7 @@ func (server *Server) getQueueCandidates(d *commandDetails) []*Hook {
 			continue
 		}
 		rect := obj.Rect()
-		server.hookTree.Search(
+		s.hookTree.Search(
 			[2]float64{rect.Min.X, rect.Min.Y},
 			[2]float64{rect.Max.X, rect.Max.Y},
 			func(_, _ [2]float64, value interface{}) bool {
@@ -243,13 +243,13 @@ func (server *Server) getQueueCandidates(d *commandDetails) []*Hook {
 	return candidates
 }
 
-func (server *Server) queueHooks(d *commandDetails) error {
+func (s *Server) queueHooks(d *commandDetails) error {
 	// Create the slices that will store all messages and hooks
 	var cmsgs, wmsgs []string
 	var whooks []*Hook
 
 	// Compile a slice of potential hook recipients
-	candidates := server.getQueueCandidates(d)
+	candidates := s.getQueueCandidates(d)
 	for _, hook := range candidates {
 		// Calculate all matching fence messages for all candidates and append
 		// them to the appropriate message slice
@@ -280,22 +280,22 @@ func (server *Server) queueHooks(d *commandDetails) error {
 	// Publish all channel messages if any exist
 	if len(cmsgs) > 0 {
 		for _, m := range cmsgs {
-			server.Publish(gjson.Get(m, "hook").String(), m)
+			s.Publish(gjson.Get(m, "hook").String(), m)
 		}
 	}
 
 	// Queue the webhook messages in the buntdb database
-	err := server.qdb.Update(func(tx *buntdb.Tx) error {
+	err := s.qdb.Update(func(tx *buntdb.Tx) error {
 		for _, msg := range wmsgs {
-			server.qidx++ // increment the log id
-			key := hookLogPrefix + uint64ToString(server.qidx)
+			s.qidx++ // increment the log id
+			key := hookLogPrefix + uint64ToString(s.qidx)
 			_, _, err := tx.Set(key, msg, hookLogSetDefaults)
 			if err != nil {
 				return err
 			}
-			log.Debugf("queued hook: %d", server.qidx)
+			log.Debugf("queued hook: %d", s.qidx)
 		}
-		_, _, err := tx.Set("hook:idx", uint64ToString(server.qidx), nil)
+		_, _, err := tx.Set("hook:idx", uint64ToString(s.qidx), nil)
 		if err != nil {
 			return err
 		}
@@ -365,7 +365,7 @@ func (s liveAOFSwitches) Error() string {
 	return goingLive
 }
 
-func (server *Server) cmdAOFMD5(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdAOFMD5(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 	var ok bool
@@ -388,7 +388,7 @@ func (server *Server) cmdAOFMD5(msg *Message) (res resp.Value, err error) {
 	if err != nil || size < 0 {
 		return NOMessage, errInvalidArgument(ssize)
 	}
-	sum, err := server.checksum(pos, size)
+	sum, err := s.checksum(pos, size)
 	if err != nil {
 		return NOMessage, err
 	}
@@ -402,8 +402,8 @@ func (server *Server) cmdAOFMD5(msg *Message) (res resp.Value, err error) {
 	return res, nil
 }
 
-func (server *Server) cmdAOF(msg *Message) (res resp.Value, err error) {
-	if server.aof == nil {
+func (s *Server) cmdAOF(msg *Message) (res resp.Value, err error) {
+	if s.aof == nil {
 		return NOMessage, errors.New("aof disabled")
 	}
 	vs := msg.Args[1:]
@@ -420,7 +420,7 @@ func (server *Server) cmdAOF(msg *Message) (res resp.Value, err error) {
 	if err != nil || pos < 0 {
 		return NOMessage, errInvalidArgument(spos)
 	}
-	f, err := os.Open(server.aof.Name())
+	f, err := os.Open(s.aof.Name())
 	if err != nil {
 		return NOMessage, err
 	}
@@ -432,19 +432,19 @@ func (server *Server) cmdAOF(msg *Message) (res resp.Value, err error) {
 	if n < pos {
 		return NOMessage, errors.New("pos is too big, must be less that the aof_size of leader")
 	}
-	var s liveAOFSwitches
-	s.pos = pos
-	return NOMessage, s
+	var ls liveAOFSwitches
+	ls.pos = pos
+	return NOMessage, ls
 }
 
-func (server *Server) liveAOF(pos int64, conn net.Conn, rd *PipelineReader, msg *Message) error {
-	server.mu.Lock()
-	server.aofconnM[conn] = true
-	server.mu.Unlock()
+func (s *Server) liveAOF(pos int64, conn net.Conn, rd *PipelineReader, msg *Message) error {
+	s.mu.Lock()
+	s.aofconnM[conn] = true
+	s.mu.Unlock()
 	defer func() {
-		server.mu.Lock()
-		delete(server.aofconnM, conn)
-		server.mu.Unlock()
+		s.mu.Lock()
+		delete(s.aofconnM, conn)
+		s.mu.Unlock()
 		conn.Close()
 	}()
 
@@ -452,9 +452,9 @@ func (server *Server) liveAOF(pos int64, conn net.Conn, rd *PipelineReader, msg 
 		return err
 	}
 
-	server.mu.RLock()
-	f, err := os.Open(server.aof.Name())
-	server.mu.RUnlock()
+	s.mu.RLock()
+	f, err := os.Open(s.aof.Name())
+	s.mu.RUnlock()
 	if err != nil {
 		return err
 	}
@@ -516,9 +516,9 @@ func (server *Server) liveAOF(pos int64, conn net.Conn, rd *PipelineReader, msg 
 					}
 					continue
 				}
-				server.fcond.L.Lock()
-				server.fcond.Wait()
-				server.fcond.L.Unlock()
+				s.fcond.L.Lock()
+				s.fcond.Wait()
+				s.fcond.L.Unlock()
 			}
 		}()
 		if err != nil {

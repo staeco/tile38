@@ -5,6 +5,8 @@ import "testing"
 func subTestJSON(t *testing.T, mc *mockServer) {
 	runStep(t, mc, "basic", json_JSET_basic_test)
 	runStep(t, mc, "geojson", json_JSET_geojson_test)
+	runStep(t, mc, "number", json_JSET_number_test)
+
 }
 func json_JSET_basic_test(mc *mockServer) error {
 	return mc.DoBatch([][]interface{}{
@@ -37,5 +39,18 @@ func json_JSET_geojson_test(mc *mockServer) error {
 		{"JSET", "mykey", "myid1", "properties.tags.-1", "hot"}, {"OK"},
 		{"JGET", "mykey", "myid1"}, {`{"type":"Feature","geometry":{"type":"Point","coordinates":[-115,44]},"properties":{"tags":["southwest","united states","hot"]}}`},
 		{"JDEL", "mykey", "myid1", "type"}, {"ERR missing type"},
+	})
+}
+
+func json_JSET_number_test(mc *mockServer) error {
+	return mc.DoBatch([][]interface{}{
+		{"JSET", "mykey", "myid1", "hello", "0"}, {"OK"},
+		{"JGET", "mykey", "myid1"}, {`{"hello":0}`},
+		{"JSET", "mykey", "myid1", "hello", "0123"}, {"OK"},
+		{"JGET", "mykey", "myid1"}, {`{"hello":"0123"}`},
+		{"JSET", "mykey", "myid1", "hello", "3.14"}, {"OK"},
+		{"JGET", "mykey", "myid1"}, {`{"hello":3.14}`},
+		{"JSET", "mykey", "myid1", "hello", "1.0e10"}, {"OK"},
+		{"JGET", "mykey", "myid1"}, {`{"hello":1.0e10}`},
 	})
 }

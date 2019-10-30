@@ -52,7 +52,7 @@ func (arr byID) Swap(a, b int) {
 	arr[a], arr[b] = arr[b], arr[a]
 }
 
-func (c *Server) cmdClient(msg *Message, client *Client) (resp.Value, error) {
+func (s *Server) cmdClient(msg *Message, client *Client) (resp.Value, error) {
 	start := time.Now()
 
 	if len(msg.Args) == 1 {
@@ -67,11 +67,11 @@ func (c *Server) cmdClient(msg *Message, client *Client) (resp.Value, error) {
 			return NOMessage, errInvalidNumberOfArguments
 		}
 		var list []*Client
-		c.connsmu.RLock()
-		for _, cc := range c.conns {
+		s.connsmu.RLock()
+		for _, cc := range s.conns {
 			list = append(list, cc)
 		}
-		c.connsmu.RUnlock()
+		s.connsmu.RUnlock()
 		sort.Sort(byID(list))
 		now := time.Now()
 		var buf []byte
@@ -190,8 +190,8 @@ func (c *Server) cmdClient(msg *Message, client *Client) (resp.Value, error) {
 			}
 		}
 		var cclose *Client
-		c.connsmu.RLock()
-		for _, cc := range c.conns {
+		s.connsmu.RLock()
+		for _, cc := range s.conns {
 			if useID && fmt.Sprintf("%d", cc.id) == id {
 				cclose = cc
 				break
@@ -200,7 +200,7 @@ func (c *Server) cmdClient(msg *Message, client *Client) (resp.Value, error) {
 				break
 			}
 		}
-		c.connsmu.RUnlock()
+		s.connsmu.RUnlock()
 		if cclose == nil {
 			return NOMessage, errors.New("No such client")
 		}

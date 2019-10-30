@@ -18,7 +18,7 @@ var errNoLongerFollowing = errors.New("no longer following")
 
 const checksumsz = 512 * 1024
 
-func (c *Server) cmdFollow(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdFollow(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 	var ok bool
@@ -37,58 +37,58 @@ func (c *Server) cmdFollow(msg *Message) (res resp.Value, err error) {
 	sport = strings.ToLower(sport)
 	var update bool
 	if host == "no" && sport == "one" {
-		update = c.config.followHost() != "" || c.config.followPort() != 0
-		c.config.setFollowHost("")
-		c.config.setFollowPort(0)
+		update = s.config.followHost() != "" || s.config.followPort() != 0
+		s.config.setFollowHost("")
+		s.config.setFollowPort(0)
 	} else {
 		n, err := strconv.ParseUint(sport, 10, 64)
 		if err != nil {
 			return NOMessage, errInvalidArgument(sport)
 		}
 		port := int(n)
-		update = c.config.followHost() != host || c.config.followPort() != port
-		auth := c.config.leaderAuth()
+		update = s.config.followHost() != host || s.config.followPort() != port
+		auth := s.config.leaderAuth()
 		if update {
-			c.mu.Unlock()
+			s.mu.Unlock()
 			conn, err := DialTimeout(fmt.Sprintf("%s:%d", host, port), time.Second*2)
 			if err != nil {
-				c.mu.Lock()
+				s.mu.Lock()
 				return NOMessage, fmt.Errorf("cannot follow: %v", err)
 			}
 			defer conn.Close()
 			if auth != "" {
-				if err := c.followDoLeaderAuth(conn, auth); err != nil {
+				if err := s.followDoLeaderAuth(conn, auth); err != nil {
 					return NOMessage, fmt.Errorf("cannot follow: %v", err)
 				}
 			}
 			m, err := doServer(conn)
 			if err != nil {
-				c.mu.Lock()
+				s.mu.Lock()
 				return NOMessage, fmt.Errorf("cannot follow: %v", err)
 			}
 			if m["id"] == "" {
-				c.mu.Lock()
+				s.mu.Lock()
 				return NOMessage, fmt.Errorf("cannot follow: invalid id")
 			}
-			if m["id"] == c.config.serverID() {
-				c.mu.Lock()
+			if m["id"] == s.config.serverID() {
+				s.mu.Lock()
 				return NOMessage, fmt.Errorf("cannot follow self")
 			}
 			if m["following"] != "" {
-				c.mu.Lock()
+				s.mu.Lock()
 				return NOMessage, fmt.Errorf("cannot follow a follower")
 			}
-			c.mu.Lock()
+			s.mu.Lock()
 		}
-		c.config.setFollowHost(host)
-		c.config.setFollowPort(port)
+		s.config.setFollowHost(host)
+		s.config.setFollowPort(port)
 	}
-	c.config.write(false)
+	s.config.write(false)
 	if update {
-		c.followc.add(1)
-		if c.config.followHost() != "" {
+		s.followc.add(1)
+		if s.config.followHost() != "" {
 			log.Infof("following new host '%s' '%s'.", host, sport)
-			go c.follow(c.config.followHost(), c.config.followPort(), c.followc.get())
+			go s.follow(s.config.followHost(), s.config.followPort(), s.followc.get())
 		} else {
 			log.Infof("following no one")
 		}
@@ -97,7 +97,7 @@ func (c *Server) cmdFollow(msg *Message) (res resp.Value, err error) {
 }
 
 // cmdReplConf is a command handler that sets replication configuration info
-func (c *Server) cmdReplConf(msg *Message, client *Client) (res resp.Value, err error) {
+func (s *Server) cmdReplConf(msg *Message, client *Client) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 	var ok bool
@@ -121,7 +121,7 @@ func (c *Server) cmdReplConf(msg *Message, client *Client) (res resp.Value, err 
 		}
 
 		// Apply the replication port to the client and return
-		for _, c := range c.conns {
+		for _, c := range s.conns {
 			if c.remoteAddr == client.remoteAddr {
 				c.replPort = port
 				return OKMessage(msg, start), nil
@@ -147,30 +147,30 @@ func doServer(conn *RESPConn) (map[string]string, error) {
 	return m, err
 }
 
-func (c *Server) followHandleCommand(args []string, followc int, w io.Writer) (int, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if c.followc.get() != followc {
-		return c.aofsz, errNoLongerFollowing
+func (s *Server) followHandleCommand(args []string, followc int, w io.Writer) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.followc.get() != followc {
+		return s.aofsz, errNoLongerFollowing
 	}
 	msg := &Message{Args: args}
 
-	_, d, err := c.command(msg, nil)
+	_, d, err := s.command(msg, nil)
 	if err != nil {
 		if commandErrIsFatal(err) {
-			return c.aofsz, err
+			return s.aofsz, err
 		}
 	}
-	if err := c.writeAOF(args, &d); err != nil {
-		return c.aofsz, err
+	if err := s.writeAOF(args, &d); err != nil {
+		return s.aofsz, err
 	}
-	if len(c.aofbuf) > 10240 {
-		c.flushAOF(false)
+	if len(s.aofbuf) > 10240 {
+		s.flushAOF(false)
 	}
-	return c.aofsz, nil
+	return s.aofsz, nil
 }
 
-func (c *Server) followDoLeaderAuth(conn *RESPConn, auth string) error {
+func (s *Server) followDoLeaderAuth(conn *RESPConn, auth string) error {
 	v, err := conn.Do("auth", auth)
 	if err != nil {
 		return err
@@ -184,14 +184,14 @@ func (c *Server) followDoLeaderAuth(conn *RESPConn, auth string) error {
 	return nil
 }
 
-func (c *Server) followStep(host string, port int, followc int) error {
-	if c.followc.get() != followc {
+func (s *Server) followStep(host string, port int, followc int) error {
+	if s.followc.get() != followc {
 		return errNoLongerFollowing
 	}
-	c.mu.Lock()
-	c.fcup = false
-	auth := c.config.leaderAuth()
-	c.mu.Unlock()
+	s.mu.Lock()
+	s.fcup = false
+	auth := s.config.leaderAuth()
+	s.mu.Unlock()
 	addr := fmt.Sprintf("%s:%d", host, port)
 
 	// check if we are following self
@@ -201,7 +201,7 @@ func (c *Server) followStep(host string, port int, followc int) error {
 	}
 	defer conn.Close()
 	if auth != "" {
-		if err := c.followDoLeaderAuth(conn, auth); err != nil {
+		if err := s.followDoLeaderAuth(conn, auth); err != nil {
 			return fmt.Errorf("cannot follow: %v", err)
 		}
 	}
@@ -213,7 +213,7 @@ func (c *Server) followStep(host string, port int, followc int) error {
 	if m["id"] == "" {
 		return fmt.Errorf("cannot follow: invalid id")
 	}
-	if m["id"] == c.config.serverID() {
+	if m["id"] == s.config.serverID() {
 		return fmt.Errorf("cannot follow self")
 	}
 	if m["following"] != "" {
@@ -221,13 +221,13 @@ func (c *Server) followStep(host string, port int, followc int) error {
 	}
 
 	// verify checksum
-	pos, err := c.followCheckSome(addr, followc)
+	pos, err := s.followCheckSome(addr, followc)
 	if err != nil {
 		return err
 	}
 
 	// Send the replication port to the leader
-	v, err := conn.Do("replconf", "listening-port", c.port)
+	v, err := conn.Do("replconf", "listening-port", s.port)
 	if err != nil {
 		return err
 	}
@@ -262,10 +262,10 @@ func (c *Server) followStep(host string, port int, followc int) error {
 
 	caughtUp := pos >= aofSize
 	if caughtUp {
-		c.mu.Lock()
-		c.fcup = true
-		c.fcuponce = true
-		c.mu.Unlock()
+		s.mu.Lock()
+		s.fcup = true
+		s.fcuponce = true
+		s.mu.Unlock()
 		log.Info("caught up")
 	}
 	nullw := ioutil.Discard
@@ -283,18 +283,18 @@ func (c *Server) followStep(host string, port int, followc int) error {
 			svals[i] = vals[i].String()
 		}
 
-		aofsz, err := c.followHandleCommand(svals, followc, nullw)
+		aofsz, err := s.followHandleCommand(svals, followc, nullw)
 		if err != nil {
 			return err
 		}
 		if !caughtUp {
 			if aofsz >= int(aofSize) {
 				caughtUp = true
-				c.mu.Lock()
-				c.flushAOF(false)
-				c.fcup = true
-				c.fcuponce = true
-				c.mu.Unlock()
+				s.mu.Lock()
+				s.flushAOF(false)
+				s.fcup = true
+				s.fcuponce = true
+				s.mu.Unlock()
 				log.Info("caught up")
 			}
 		}
@@ -302,9 +302,9 @@ func (c *Server) followStep(host string, port int, followc int) error {
 	}
 }
 
-func (c *Server) follow(host string, port int, followc int) {
+func (s *Server) follow(host string, port int, followc int) {
 	for {
-		err := c.followStep(host, port, followc)
+		err := s.followStep(host, port, followc)
 		if err == errNoLongerFollowing {
 			return
 		}

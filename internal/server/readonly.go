@@ -8,7 +8,7 @@ import (
 	"github.com/tidwall/tile38/internal/log"
 )
 
-func (c *Server) cmdReadOnly(msg *Message) (res resp.Value, err error) {
+func (s *Server) cmdReadOnly(msg *Message) (res resp.Value, err error) {
 	start := time.Now()
 	vs := msg.Args[1:]
 	var arg string
@@ -25,20 +25,20 @@ func (c *Server) cmdReadOnly(msg *Message) (res resp.Value, err error) {
 	default:
 		return NOMessage, errInvalidArgument(arg)
 	case "yes":
-		if !c.config.readOnly() {
+		if !s.config.readOnly() {
 			update = true
-			c.config.setReadOnly(true)
+			s.config.setReadOnly(true)
 			log.Info("read only")
 		}
 	case "no":
-		if c.config.readOnly() {
+		if s.config.readOnly() {
 			update = true
-			c.config.setReadOnly(false)
+			s.config.setReadOnly(false)
 			log.Info("read write")
 		}
 	}
 	if update {
-		c.config.write(false)
+		s.config.write(false)
 	}
 	return OKMessage(msg, start), nil
 }
