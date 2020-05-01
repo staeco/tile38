@@ -1,0 +1,6 @@
+FROM staeco/tile38:readonly-1.19.5
+
+ADD data/* /data/
+ADD ./check.py /
+
+CMD ["start.sh"]
