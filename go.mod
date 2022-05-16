@@ -20,10 +20,11 @@ require (
 	github.com/tidwall/cities v0.0.0-20190730194520-dbe1ae0b862c // indirect
 	github.com/tidwall/geoindex v1.1.0
 	github.com/tidwall/geojson v1.2.3
-	github.com/tidwall/gjson v1.6.1
+	github.com/tidwall/gjson v1.9.3
 	github.com/tidwall/grect v0.0.0-20161006141115-ba9a043346eb // indirect
-	github.com/tidwall/match v1.0.1
-	github.com/tidwall/pretty v1.0.2
+	github.com/tidwall/lotsa v1.0.2 // indirect
+	github.com/tidwall/match v1.1.1
+	github.com/tidwall/pretty v1.2.0
 	github.com/tidwall/rbang v1.2.2
 	github.com/tidwall/redbench v0.0.0-20181110173744-17c5b5b864a4
 	github.com/tidwall/redcon v1.3.2
