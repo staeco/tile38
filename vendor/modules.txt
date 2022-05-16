@@ -103,13 +103,13 @@ github.com/tidwall/geoindex/child
 github.com/tidwall/geojson
 github.com/tidwall/geojson/geo
 github.com/tidwall/geojson/geometry
-# github.com/tidwall/gjson v1.6.1
+# github.com/tidwall/gjson v1.9.3
 github.com/tidwall/gjson
 # github.com/tidwall/grect v0.0.0-20161006141115-ba9a043346eb
 github.com/tidwall/grect
-# github.com/tidwall/match v1.0.1
+# github.com/tidwall/match v1.1.1
 github.com/tidwall/match
-# github.com/tidwall/pretty v1.0.2
+# github.com/tidwall/pretty v1.2.0
 github.com/tidwall/pretty
 # github.com/tidwall/rbang v1.2.2
 github.com/tidwall/rbang
