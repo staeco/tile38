@@ -22,6 +22,7 @@ require (
 	github.com/tidwall/geojson v1.2.3
 	github.com/tidwall/gjson v1.6.1
 	github.com/tidwall/grect v0.0.0-20161006141115-ba9a043346eb // indirect
+	github.com/tidwall/lotsa v1.0.3 // indirect
 	github.com/tidwall/match v1.0.1
 	github.com/tidwall/pretty v1.0.2
 	github.com/tidwall/rbang v1.2.2
@@ -34,8 +35,8 @@ require (
 	github.com/tidwall/tinybtree v0.0.0-20181217131827-de5932d649b5
 	github.com/tidwall/tinyqueue v0.0.0-20180302190814-1e39f5511563 // indirect
 	github.com/yuin/gopher-lua v0.0.0-20200816102855-ee81675732da
-	golang.org/x/crypto v0.0.0-20200204104054-c9f3fb736b72
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/net v0.7.0
 	google.golang.org/grpc v1.32.0
 	layeh.com/gopher-json v0.0.0-20190114024228-97fed8db8427
 )
